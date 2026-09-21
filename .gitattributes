@@ -1,0 +1,23 @@
+# Git on Windows rewrites checkouts to CRLF by default. Two kinds of file in
+# this repository are then executed by a Linux shell - the setup scripts, and
+# everything a container runs - and a shell reading `#!/usr/bin/env bash\r`
+# reports "bad interpreter" or "no such file or directory", naming a file that
+# is plainly there. Pin them to LF so a Windows clone still works.
+
+* text=auto
+
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+.dockerignore text eol=lf
+
+# Compressed corpora: never touched, never diffed as text.
+*.gz        binary
+*.png       binary
+*.zip       binary
+
+# Vendored verbatim from the dataset build, and pinned by a sha256 in
+# tests/test_text_transforms.py. `* text=auto` above would hand a Windows
+# checkout CRLF, which is a different digest for identical code.
+src/vea/text_clean.py -text

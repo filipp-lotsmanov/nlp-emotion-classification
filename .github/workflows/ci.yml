@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # All three desktop platforms, deliberately.
+    #
+    # Windows: the migrated stage modules carry Cyrillic docstrings and the
+    # pipeline's JSON output is full of Russian text, so anything that opens a
+    # text file without naming an encoding works on Linux and fails only on a
+    # Western-European Windows install (cp1252). It is also the only runner
+    # where os.name == "nt", which is where cancelling a job used to raise
+    # AttributeError out of os.killpg - a crash Docker hid, because the
+    # container is Linux whatever the host is.
+    #
+    # macOS: POSIX like Linux but not Linux. Case-insensitive filesystem by
+    # default, a different temp directory layout, and arm64 wheels rather than
+    # x86_64 ones.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+        exclude:
+          # One runner each is enough on the platforms that are there to catch
+          # platform bugs rather than version bugs.
+          - os: windows-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.13"
+          - os: macos-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.13"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      # The default job installs the package and dev group only. It deliberately
+      # does NOT install torch: the fast test suite must stay runnable without a
+      # GPU stack, which is what keeps CI to well under a minute. If a future
+      # test needs torch, give it the `slow` marker and a separate job.
+      - name: Install (no heavy dependencies)
+        run: uv sync --no-install-project --only-group dev
+
+      - name: Install project without dependencies
+        run: uv pip install -e . --no-deps
+
+      - name: Lint
+        run: uv run --no-sync ruff check .
+
+      - name: Format check
+        run: uv run --no-sync ruff format --check .
+
+      # The Windows cp1252 failure mode is covered by
+      # tests/test_source_hygiene.py::test_text_file_io_declares_an_encoding,
+      # which AST-scans every file this repo owns. A runtime
+      # -W error::EncodingWarning was tried instead and removed: it fires inside
+      # third-party packages (dill, via datasets) and is silent when they are
+      # absent, so it failed for unrelated reasons while missing its own target.
+      - name: Tests
+        run: uv run --no-sync python -m pytest -q -m "not slow and not integration"
+
+  lock-is-current:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      # Fails if pyproject.toml was edited without re-locking, which is how a
+      # "works on my machine" environment drift starts.
+      - name: uv.lock matches pyproject.toml
+        run: uv lock --check
+
+  resolves:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      # Plan the full install without downloading the ~3 GB of CUDA wheels:
+      # proves every extra is still satisfiable together on a clean machine.
+      - name: All extras resolve together
+        run: uv sync --all-extras --dry-run

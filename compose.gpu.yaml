@@ -1,0 +1,30 @@
+# Attach the NVIDIA card to the pipeline container. An overlay, never used
+# alone:
+#
+#   docker compose -f compose.yaml -f compose.gpu.yaml --profile full up -d app frontend
+#
+# This is a separate file because a GPU reservation is not a preference the
+# daemon can decline. With no adapter visible it refuses to create the
+# container:
+#
+#   nvidia-container-cli: initialization error: WSL environment detected but
+#   no adapters were found
+#
+# So every machine without a card would have had to edit compose.yaml before it
+# could run the pipeline at all - on the CPU, which it is perfectly able to do,
+# at roughly a tenth of the speed.
+#
+# Needs the NVIDIA Container Toolkit on Linux, or Docker Desktop with the WSL2
+# backend and a current NVIDIA driver on Windows. Confirm before using it:
+#
+#   docker run --rm --gpus all ubuntu:22.04 nvidia-smi -L
+
+services:
+  app:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

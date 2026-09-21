@@ -1,0 +1,26 @@
+# Everything by default; the Dockerfile opts in to what it needs. A denylist
+# would silently start shipping whatever gets added next.
+*
+
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+!docs/
+!corpora/
+!training/
+!scripts/
+
+# Re-excluded after the opt-ins above, because they match inside them.
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.ruff_cache/
+**/.ipynb_checkpoints/
+
+# Per-video artefacts and weights belong in the /data volume, never in a layer.
+downloads/
+models/
+data/
+outputs/

@@ -1,0 +1,36 @@
+Copyright (c) 2025 the authors of this project.
+
+This work is licensed under the Creative Commons Attribution-ShareAlike 4.0
+International License (CC BY-SA 4.0).
+
+The full legal text is available at:
+    https://creativecommons.org/licenses/by-sa/4.0/legalcode
+    SPDX-License-Identifier: CC-BY-SA-4.0
+
+WHY CC BY-SA 4.0 AND NOT MIT
+----------------------------
+The pipeline source code would normally be released under a permissive licence.
+CC BY-SA 4.0 is used for the repository as a whole because the English emotion
+classifier is fine-tuned on the "super-emotion" dataset
+(https://huggingface.co/datasets/cirimus/super-emotion), which is distributed
+under CC BY-SA 4.0. ShareAlike propagates to derived works, so any checkpoint
+trained on that data, and any distribution bundling such a checkpoint, must
+carry a compatible licence.
+
+Consequences worth knowing before you redistribute:
+
+  - Weights trained on super-emotion inherit CC BY-SA 4.0. They cannot be
+    relicensed as MIT.
+  - The NLLB-200 translation models used in stage 5B are CC-BY-NC-4.0:
+    non-commercial. Any commercial use of this pipeline requires replacing
+    stage 5B.
+  - Third-party models loaded from the Hub keep their own licences; see the
+    per-model `license` field in src/vea/config.py and docs/LICENSING.md.
+
+If you split the repository so that no CC BY-SA 4.0 data or weights are
+included, the pipeline code itself can be relicensed by its authors.
+
+REQUIRED ATTRIBUTION
+--------------------
+See the Citation section of docs/ARCHITECTURE.md for the upstream datasets and
+models that must be credited.

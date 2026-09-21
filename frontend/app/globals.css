@@ -1,0 +1,933 @@
+/* One stylesheet, plain CSS custom properties. No Tailwind: the whole UI is
+   five pages, and a build-step dependency would cost more than it saves.
+
+   Two themes, one set of names. Everything below the token blocks reads
+   --surface, --text, --border and never a literal colour, so adding the light
+   theme meant adding a token block rather than auditing the file.
+
+   Resolution order: an explicit data-theme wins; with no attribute the system
+   preference decides. That is why the light block appears twice - once for
+   the explicit choice, once under the media query guarded against an explicit
+   dark. The inline script in layout.tsx sets the attribute before first
+   paint, so a stored preference never flashes the wrong theme.
+
+   Motion is used to show change, never for decoration: a stage finishing, a
+   bar reaching its value, a row arriving. Everything is short, and all of it
+   is off under prefers-reduced-motion. */
+
+:root {
+  color-scheme: dark;
+
+  /* Charcoal, not black. Pure black halos against saturated hues, and a page
+     of it reads as a void rather than as a surface. */
+  --bg: #15181e;
+  --bg-elevated: #1b1f27;
+  --surface: #1e222a;
+  --surface-2: #262b35;
+  --surface-3: #313745;
+  --border: #2c323d;
+  --border-strong: #3d4552;
+
+  --text: #e4e8ee;
+  --text-dim: #9aa3b2;
+  --text-faint: #6b7483;
+
+  --accent: #7aa2ff;
+  --accent-soft: rgba(122, 162, 255, 0.15);
+  --accent-text: #0d1524;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --error: #f87171;
+
+  --log-bg: #11141a;
+  --log-text: #c6cdd9;
+  /* The stage 8 PNG is rendered on white by matplotlib and those are the same
+     bytes that go in the report, so it is framed rather than re-rendered. */
+  --figure-bg: #fdfdfd;
+
+  --wash: rgba(122, 162, 255, 0.07);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* One easing everywhere. Mixing curves is what makes an interface feel
+     assembled rather than designed. */
+  --ease: cubic-bezier(0.32, 0.72, 0.28, 1);
+  --fast: 140ms;
+  --base: 240ms;
+  --slow: 420ms;
+
+  /* The sticky thead has to start exactly where the header ends. Guessing it
+     left a few pixels of gap and rows showed through. */
+  --header-h: 58px;
+}
+
+/* Warm off-white rather than #fff: paper, not a lightbox. The same greys at
+   the same relative steps, inverted. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f7f6f4;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #efedea;
+  --surface-3: #e5e2dd;
+  --border: #e2dfd9;
+  --border-strong: #c7c2b9;
+
+  --text: #1b1d21;
+  --text-dim: #5c6270;
+  --text-faint: #8a8f99;
+
+  --accent: #2f62e0;
+  --accent-soft: rgba(47, 98, 224, 0.12);
+  --accent-text: #ffffff;
+  --ok: #15803d;
+  --warn: #a35a06;
+  --error: #c0261d;
+
+  /* The log stays dark in both themes. It is terminal output, it is read as a
+     block rather than as prose, and inverting it makes it harder to scan. */
+  --log-bg: #1a1e25;
+  --log-text: #cdd4df;
+  --figure-bg: #ffffff;
+
+  --wash: rgba(47, 98, 224, 0.05);
+  --shadow: 0 1px 2px rgba(31, 30, 28, 0.06), 0 8px 24px -14px rgba(31, 30, 28, 0.22);
+  --shadow-lift: 0 2px 4px rgba(31, 30, 28, 0.07), 0 16px 40px -18px rgba(31, 30, 28, 0.3);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+
+    --bg: #f7f6f4;
+    --bg-elevated: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #efedea;
+    --surface-3: #e5e2dd;
+    --border: #e2dfd9;
+    --border-strong: #c7c2b9;
+
+    --text: #1b1d21;
+    --text-dim: #5c6270;
+    --text-faint: #8a8f99;
+
+    --accent: #2f62e0;
+    --accent-soft: rgba(47, 98, 224, 0.12);
+    --accent-text: #ffffff;
+    --ok: #15803d;
+    --warn: #a35a06;
+    --error: #c0261d;
+
+    --log-bg: #1a1e25;
+    --log-text: #cdd4df;
+    --figure-bg: #ffffff;
+
+    --wash: rgba(47, 98, 224, 0.05);
+    --shadow: 0 1px 2px rgba(31, 30, 28, 0.06), 0 8px 24px -14px rgba(31, 30, 28, 0.22);
+    --shadow-lift: 0 2px 4px rgba(31, 30, 28, 0.07), 0 16px 40px -18px rgba(31, 30, 28, 0.3);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  transition:
+    background-color var(--base) var(--ease),
+    color var(--base) var(--ease);
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.6 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* A single wide, very dim wash behind the header. Enough to stop the page
+     reading as a flat rectangle; not enough to notice deliberately. */
+  background-image: radial-gradient(1100px 420px at 50% -240px, var(--wash), transparent 70%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition:
+    color var(--fast) var(--ease),
+    text-decoration-color var(--fast) var(--ease);
+}
+a:hover {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+}
+
+/* --- scrollbars -------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+  background-clip: content-box;
+}
+
+/* --- shell ------------------------------------------------------------- */
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 20px 96px;
+  animation: rise var(--slow) var(--ease) both;
+}
+
+header.site {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--border);
+  /* Nearly opaque, not glassy. A translucent bar looks good over a hero
+     image and looks like a rendering fault over a 311-row table, which is
+     what this app actually shows. The blur keeps a little depth. */
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+}
+header.site .inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: calc(var(--header-h) - 1px);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+header.site h1 {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+header.site nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.icon-button {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.icon-button:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--text);
+  filter: none;
+}
+.icon-button svg {
+  transition: transform var(--base) var(--ease);
+}
+.icon-button:hover svg {
+  transform: rotate(-18deg);
+}
+header.site nav a {
+  position: relative;
+  text-decoration: none;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  padding: 5px 11px;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+header.site nav a:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+/* --- type -------------------------------------------------------------- */
+h2 {
+  font-size: 19px;
+  margin: 34px 0 12px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+h3 {
+  font-size: 14px;
+  margin: 26px 0 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+p.hint {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 6px 0 0;
+  max-width: 78ch;
+}
+.muted {
+  color: var(--text-dim);
+}
+.mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+.truncate {
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- surfaces ---------------------------------------------------------- */
+.card {
+  background: linear-gradient(180deg, var(--bg-elevated), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  transition:
+    border-color var(--base) var(--ease),
+    transform var(--base) var(--ease),
+    box-shadow var(--base) var(--ease);
+}
+a.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.grid.cols-3 {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+/* --- controls ---------------------------------------------------------- */
+input[type="url"],
+input[type="text"],
+select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  min-width: 0;
+  transition:
+    border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+input::placeholder {
+  color: var(--text-faint);
+}
+input:hover:not(:disabled),
+select:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+input:disabled,
+select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) calc(50% + 1px),
+    calc(100% - 10px) calc(50% + 1px);
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+button {
+  position: relative;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 17px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    filter var(--fast) var(--ease),
+    transform var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
+}
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+button.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  filter: none;
+}
+
+:is(input, select, button, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- tables ------------------------------------------------------------ */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13.5px;
+}
+th,
+td {
+  text-align: left;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--border);
+}
+thead th {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 2;
+  /* Fully opaque. Rows scrolling under a sticky header must disappear
+     behind it, not show through it. */
+  background: var(--bg);
+  box-shadow: inset 0 -1px 0 var(--border);
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+tbody tr {
+  transition: background var(--fast) var(--ease);
+}
+tbody tr:hover {
+  background: var(--surface);
+}
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- pills, swatches, bars --------------------------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.pill.status-running::before {
+  animation: pulse 1.6s var(--ease) infinite;
+}
+
+.swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 7px;
+  vertical-align: baseline;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width var(--slow) var(--ease);
+}
+/* A run in progress: the fill carries a slow sheen so a long stage does not
+   look like a stalled one. */
+.bar.live > span {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: sheen 1.8s linear infinite;
+}
+
+/* --- status colours ---------------------------------------------------- */
+.status-queued {
+  color: var(--text-dim);
+}
+.status-running {
+  color: var(--accent);
+}
+.status-succeeded {
+  color: var(--ok);
+}
+.status-failed {
+  color: var(--error);
+}
+.status-cancelled {
+  color: var(--warn);
+}
+
+/* --- notices ----------------------------------------------------------- */
+.notice {
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--warn);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13.5px;
+  animation: rise var(--base) var(--ease) both;
+}
+.notice.error {
+  border-left-color: var(--error);
+}
+.notice.ok {
+  border-left-color: var(--ok);
+}
+
+/* --- stage strip ------------------------------------------------------- */
+.stages {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.stages .stage {
+  flex: 1 1 64px;
+  min-width: 64px;
+  text-align: center;
+  padding: 7px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  border: 1px solid transparent;
+  transition:
+    background var(--base) var(--ease),
+    color var(--base) var(--ease),
+    border-color var(--base) var(--ease),
+    transform var(--base) var(--ease);
+}
+.stages .stage.done {
+  background: color-mix(in srgb, var(--ok) 15%, var(--surface-2));
+  color: var(--text-dim);
+  border-color: color-mix(in srgb, var(--ok) 28%, transparent);
+}
+.stages .stage.active {
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface-2));
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  animation: breathe 2.4s var(--ease) infinite;
+}
+
+/* --- the interactive timeline ------------------------------------------ */
+.timeline {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px 10px 6px;
+  box-shadow: var(--shadow);
+}
+.timeline-svg {
+  display: block;
+  width: 100%;
+  height: 84px;
+  border-radius: var(--radius-sm);
+  /* The bands butt against each other; without this the antialiased seams
+     add a pale grid over a dense run. */
+  shape-rendering: crispEdges;
+  background: var(--surface-2);
+}
+.timeline-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font: 10.5px/1 var(--mono);
+  color: var(--text-faint);
+}
+.timeline-tip {
+  position: absolute;
+  /* Below the strip, not above it. Above, it covered the run's own heading
+     and read as a detached panel; below, it appears where the eye is already
+     going and only ever covers the legend, which cannot be clicked while a
+     band is being hovered anyway. */
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(360px, 78vw);
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+}
+
+/* --- chips: the legend, and the timeline switch ------------------------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+button.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+button.chip:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+  filter: none;
+}
+button.chip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+button.chip .swatch {
+  margin: 0;
+}
+
+/* A button that has to sit inside running text or a table cell. */
+button.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: 3px;
+}
+button.linklike:hover {
+  text-decoration: underline;
+  filter: none;
+}
+
+/* The row a timeline click scrolled to. It fades rather than latching: the
+   point is to catch the eye once, not to leave state on the page. */
+tbody tr.picked {
+  background: var(--accent-soft);
+  animation: flash 2.2s var(--ease) forwards;
+}
+@keyframes flash {
+  0%,
+  35% {
+    background: var(--accent-soft);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* --- the timeline figure ----------------------------------------------- */
+/* Stage 8 renders on white, and those are the same bytes that go in the
+   report - re-rendering a dark copy for the browser would mean two images
+   that can disagree. So it is framed as what it is: a printed figure, on a
+   plate, with the page's own border around it. */
+.figure {
+  background: var(--figure-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+
+/* --- log --------------------------------------------------------------- */
+.log {
+  background: var(--log-bg);
+  color: var(--log-text);
+  font: 12px/1.65 var(--mono);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: 380px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overscroll-behavior: contain;
+}
+
+/* --- disclosure -------------------------------------------------------- */
+/* The raw pipeline log, folded away. It is the first thing wanted when a run
+   fails and the last thing wanted when one does not, so it is one click deep
+   rather than in front of everyone. */
+details.fold {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  transition: border-color var(--fast) var(--ease);
+}
+details.fold:hover {
+  border-color: var(--border-strong);
+}
+details.fold > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  user-select: none;
+  transition: color var(--fast) var(--ease);
+}
+details.fold > summary::-webkit-details-marker {
+  display: none;
+}
+details.fold > summary:hover {
+  color: var(--text);
+}
+details.fold > summary::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+  border-left-color: currentColor;
+  transition: transform var(--base) var(--ease);
+  transform-origin: 2px 50%;
+  flex: none;
+}
+details.fold[open] > summary::before {
+  transform: rotate(90deg);
+}
+details.fold > summary > .spacer {
+  margin-left: auto;
+}
+details.fold .fold-body {
+  padding: 0 14px 14px;
+  animation: rise var(--base) var(--ease) both;
+}
+
+/* --- loading ----------------------------------------------------------- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-2) 37%,
+    var(--surface) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--radius-sm);
+}
+.skeleton + .skeleton {
+  margin-top: 10px;
+}
+
+/* --- entrance ---------------------------------------------------------- */
+/* Rows and cards come in with a short stagger. `--i` is set inline by the
+   component; anything past the tenth arrives with the tenth, so a 300-row
+   table does not spend ten seconds assembling itself. */
+.enter {
+  animation: rise var(--base) var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 28ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+@keyframes sheen {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* Motion is decoration on top of a page that already works without it. The
+   one exception kept alive is the progress bar's width, because a bar that
+   teleports is harder to read than one that moves - and 0.01ms is not motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    /* The delays matter as much as the durations. `.enter` fills backwards,
+       so a staggered row left with its delay would sit at opacity 0 for a
+       quarter of a second before appearing - motion by another name. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+  .bar > span {
+    transition-duration: 200ms !important;
+  }
+}
+
+/* --- narrow screens ---------------------------------------------------- */
+@media (max-width: 640px) {
+  .shell {
+    padding: 20px 16px 72px;
+  }
+  header.site .inner {
+    padding: 8px 16px;
+  }
+  thead th {
+    position: static;
+  }
+  .stages .stage {
+    flex-basis: 52px;
+    min-width: 52px;
+  }
+}

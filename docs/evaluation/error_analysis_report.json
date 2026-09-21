@@ -1,0 +1,658 @@
+{
+  "length_analysis": {
+    "correct_mean_length": 94.59838051076198,
+    "incorrect_mean_length": 80.04570808800744,
+    "correct_mean_words": 18.56320506609454,
+    "incorrect_mean_words": 15.354508831732259,
+    "mann_whitney_statistic": 212901925.5,
+    "mann_whitney_pvalue": 7.62670572857782e-78,
+    "significant": true
+  },
+  "vocabulary_analysis": {
+    "top_error_words": [
+      {
+        "word": "yemen",
+        "freq_correct": 0,
+        "freq_incorrect": 5,
+        "total_freq": 5,
+        "error_ratio": Infinity
+      },
+      {
+        "word": "swine",
+        "freq_correct": 0,
+        "freq_incorrect": 5,
+        "total_freq": 5,
+        "error_ratio": Infinity
+      },
+      {
+        "word": "macbook",
+        "freq_correct": 0,
+        "freq_incorrect": 6,
+        "total_freq": 6,
+        "error_ratio": Infinity
+      },
+      {
+        "word": "prejudiced",
+        "freq_correct": 0,
+        "freq_incorrect": 11,
+        "total_freq": 11,
+        "error_ratio": Infinity
+      },
+      {
+        "word": "twitterland",
+        "freq_correct": 0,
+        "freq_incorrect": 5,
+        "total_freq": 5,
+        "error_ratio": Infinity
+      },
+      {
+        "word": "madden",
+        "freq_correct": 1,
+        "freq_incorrect": 5,
+        "total_freq": 6,
+        "error_ratio": 52.514056460114794
+      },
+      {
+        "word": "besties",
+        "freq_correct": 1,
+        "freq_incorrect": 5,
+        "total_freq": 6,
+        "error_ratio": 52.514056460114794
+      },
+      {
+        "word": "whyy",
+        "freq_correct": 1,
+        "freq_incorrect": 5,
+        "total_freq": 6,
+        "error_ratio": 52.514056460114794
+      },
+      {
+        "word": "yeah",
+        "freq_correct": 2,
+        "freq_incorrect": 9,
+        "total_freq": 11,
+        "error_ratio": 47.26265081410332
+      },
+      {
+        "word": "hollie",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "jenn",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "ughh",
+        "freq_correct": 2,
+        "freq_incorrect": 8,
+        "total_freq": 10,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "yer",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "sux",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "9am",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "ahaha",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "2morrow",
+        "freq_correct": 1,
+        "freq_incorrect": 4,
+        "total_freq": 5,
+        "error_ratio": 42.01124516809183
+      },
+      {
+        "word": "ouch",
+        "freq_correct": 2,
+        "freq_incorrect": 7,
+        "total_freq": 9,
+        "error_ratio": 36.759839522080355
+      },
+      {
+        "word": "ima",
+        "freq_correct": 2,
+        "freq_incorrect": 7,
+        "total_freq": 9,
+        "error_ratio": 36.759839522080355
+      },
+      {
+        "word": "gutted",
+        "freq_correct": 2,
+        "freq_incorrect": 6,
+        "total_freq": 8,
+        "error_ratio": 31.508433876068878
+      },
+      {
+        "word": "hee",
+        "freq_correct": 2,
+        "freq_incorrect": 6,
+        "total_freq": 8,
+        "error_ratio": 31.508433876068878
+      },
+      {
+        "word": "lol",
+        "freq_correct": 4,
+        "freq_incorrect": 11,
+        "total_freq": 15,
+        "error_ratio": 28.88273105306314
+      },
+      {
+        "word": "boo",
+        "freq_correct": 10,
+        "freq_incorrect": 26,
+        "total_freq": 36,
+        "error_ratio": 27.30730935925969
+      },
+      {
+        "word": "3rd",
+        "freq_correct": 2,
+        "freq_incorrect": 5,
+        "total_freq": 7,
+        "error_ratio": 26.257028230057397
+      },
+      {
+        "word": "noo",
+        "freq_correct": 7,
+        "freq_incorrect": 17,
+        "total_freq": 24,
+        "error_ratio": 25.50682742348433
+      },
+      {
+        "word": "outta",
+        "freq_correct": 3,
+        "freq_incorrect": 7,
+        "total_freq": 10,
+        "error_ratio": 24.506559681386904
+      },
+      {
+        "word": "hun",
+        "freq_correct": 3,
+        "freq_incorrect": 6,
+        "total_freq": 9,
+        "error_ratio": 21.005622584045916
+      },
+      {
+        "word": "battery",
+        "freq_correct": 3,
+        "freq_incorrect": 6,
+        "total_freq": 9,
+        "error_ratio": 21.005622584045916
+      },
+      {
+        "word": "wit",
+        "freq_correct": 3,
+        "freq_incorrect": 6,
+        "total_freq": 9,
+        "error_ratio": 21.005622584045916
+      },
+      {
+        "word": "canceled",
+        "freq_correct": 2,
+        "freq_incorrect": 4,
+        "total_freq": 6,
+        "error_ratio": 21.005622584045916
+      }
+    ],
+    "top_correct_words": [
+      {
+        "word": "oftentimes",
+        "freq_correct": 8,
+        "freq_incorrect": 0,
+        "total_freq": 8,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "devotion",
+        "freq_correct": 9,
+        "freq_incorrect": 0,
+        "total_freq": 9,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "competent",
+        "freq_correct": 10,
+        "freq_incorrect": 0,
+        "total_freq": 10,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "persistence",
+        "freq_correct": 5,
+        "freq_incorrect": 0,
+        "total_freq": 5,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "challenges",
+        "freq_correct": 28,
+        "freq_incorrect": 0,
+        "total_freq": 28,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "humbled",
+        "freq_correct": 20,
+        "freq_incorrect": 0,
+        "total_freq": 20,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "almond",
+        "freq_correct": 9,
+        "freq_incorrect": 0,
+        "total_freq": 9,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "practical",
+        "freq_correct": 8,
+        "freq_incorrect": 0,
+        "total_freq": 8,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "assumption",
+        "freq_correct": 5,
+        "freq_incorrect": 0,
+        "total_freq": 5,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "heritage",
+        "freq_correct": 5,
+        "freq_incorrect": 0,
+        "total_freq": 5,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "engaged",
+        "freq_correct": 11,
+        "freq_incorrect": 0,
+        "total_freq": 11,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "lifes",
+        "freq_correct": 8,
+        "freq_incorrect": 0,
+        "total_freq": 8,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "pierce",
+        "freq_correct": 6,
+        "freq_incorrect": 0,
+        "total_freq": 6,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "caffeine",
+        "freq_correct": 13,
+        "freq_incorrect": 0,
+        "total_freq": 13,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "renewed",
+        "freq_correct": 5,
+        "freq_incorrect": 0,
+        "total_freq": 5,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "alpha",
+        "freq_correct": 5,
+        "freq_incorrect": 0,
+        "total_freq": 5,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "disbelief",
+        "freq_correct": 8,
+        "freq_incorrect": 0,
+        "total_freq": 8,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "perspective",
+        "freq_correct": 35,
+        "freq_incorrect": 0,
+        "total_freq": 35,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "chunk",
+        "freq_correct": 16,
+        "freq_incorrect": 0,
+        "total_freq": 16,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "sceptical",
+        "freq_correct": 13,
+        "freq_incorrect": 0,
+        "total_freq": 13,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "winner",
+        "freq_correct": 14,
+        "freq_incorrect": 0,
+        "total_freq": 14,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "poses",
+        "freq_correct": 7,
+        "freq_incorrect": 0,
+        "total_freq": 7,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "troll",
+        "freq_correct": 7,
+        "freq_incorrect": 0,
+        "total_freq": 7,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "vocal",
+        "freq_correct": 7,
+        "freq_incorrect": 0,
+        "total_freq": 7,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "surrounding",
+        "freq_correct": 16,
+        "freq_incorrect": 0,
+        "total_freq": 16,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "cockroaches",
+        "freq_correct": 7,
+        "freq_incorrect": 0,
+        "total_freq": 7,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "approaching",
+        "freq_correct": 11,
+        "freq_incorrect": 0,
+        "total_freq": 11,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "optimistic",
+        "freq_correct": 216,
+        "freq_incorrect": 0,
+        "total_freq": 216,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "overboard",
+        "freq_correct": 6,
+        "freq_incorrect": 0,
+        "total_freq": 6,
+        "error_ratio": 0.0
+      },
+      {
+        "word": "wholly",
+        "freq_correct": 7,
+        "freq_incorrect": 0,
+        "total_freq": 7,
+        "error_ratio": 0.0
+      }
+    ]
+  },
+  "class_confusion": {
+    "class_errors": [
+      {
+        "emotion": "Anger",
+        "total_samples": 8695,
+        "errors": 538,
+        "error_rate": 0.06187464059804485,
+        "most_confused_with": {
+          "Disgust": 185,
+          "Neutral": 126,
+          "Sadness": 125
+        }
+      },
+      {
+        "emotion": "Disgust",
+        "total_samples": 2147,
+        "errors": 181,
+        "error_rate": 0.08430367955286447,
+        "most_confused_with": {
+          "Neutral": 49,
+          "Anger": 48,
+          "Sadness": 36
+        }
+      },
+      {
+        "emotion": "Fear",
+        "total_samples": 8003,
+        "errors": 1990,
+        "error_rate": 0.248656753717356,
+        "most_confused_with": {
+          "Sadness": 535,
+          "Neutral": 383,
+          "Disgust": 316
+        }
+      },
+      {
+        "emotion": "Joy",
+        "total_samples": 22181,
+        "errors": 1389,
+        "error_rate": 0.06262116225598485,
+        "most_confused_with": {
+          "Neutral": 638,
+          "Sadness": 243,
+          "Disgust": 169
+        }
+      },
+      {
+        "emotion": "Neutral",
+        "total_samples": 2010,
+        "errors": 739,
+        "error_rate": 0.36766169154228856,
+        "most_confused_with": {
+          "Joy": 269,
+          "Disgust": 239,
+          "Sadness": 134
+        }
+      },
+      {
+        "emotion": "Sadness",
+        "total_samples": 18842,
+        "errors": 1079,
+        "error_rate": 0.05726568304850865,
+        "most_confused_with": {
+          "Anger": 290,
+          "Disgust": 274,
+          "Neutral": 241
+        }
+      },
+      {
+        "emotion": "Surprise",
+        "total_samples": 2372,
+        "errors": 538,
+        "error_rate": 0.22681281618887014,
+        "most_confused_with": {
+          "Neutral": 156,
+          "Joy": 155,
+          "Disgust": 93
+        }
+      }
+    ],
+    "top_confusion_pairs": [
+      {
+        "label": "Joy",
+        "predicted_label": "Neutral",
+        "count": 638
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Sadness",
+        "count": 535
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Neutral",
+        "count": 383
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Disgust",
+        "count": 316
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Surprise",
+        "count": 315
+      },
+      {
+        "label": "Sadness",
+        "predicted_label": "Anger",
+        "count": 290
+      },
+      {
+        "label": "Sadness",
+        "predicted_label": "Disgust",
+        "count": 274
+      },
+      {
+        "label": "Neutral",
+        "predicted_label": "Joy",
+        "count": 269
+      },
+      {
+        "label": "Joy",
+        "predicted_label": "Sadness",
+        "count": 243
+      },
+      {
+        "label": "Sadness",
+        "predicted_label": "Neutral",
+        "count": 241
+      },
+      {
+        "label": "Neutral",
+        "predicted_label": "Disgust",
+        "count": 239
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Anger",
+        "count": 235
+      },
+      {
+        "label": "Fear",
+        "predicted_label": "Joy",
+        "count": 206
+      },
+      {
+        "label": "Anger",
+        "predicted_label": "Disgust",
+        "count": 185
+      },
+      {
+        "label": "Joy",
+        "predicted_label": "Disgust",
+        "count": 169
+      },
+      {
+        "label": "Sadness",
+        "predicted_label": "Joy",
+        "count": 166
+      },
+      {
+        "label": "Surprise",
+        "predicted_label": "Neutral",
+        "count": 156
+      },
+      {
+        "label": "Surprise",
+        "predicted_label": "Joy",
+        "count": 155
+      },
+      {
+        "label": "Joy",
+        "predicted_label": "Anger",
+        "count": 148
+      },
+      {
+        "label": "Neutral",
+        "predicted_label": "Sadness",
+        "count": 134
+      }
+    ]
+  },
+  "textual_features": {
+    "has_exclamation": {
+      "error_rate_with": 0.5660893345487694,
+      "error_rate_without": 0.08398865540801856,
+      "samples_with": 2194,
+      "samples_without": 62056
+    },
+    "has_question": {
+      "error_rate_with": 0.5579293344289236,
+      "error_rate_without": 0.09161867593165485,
+      "samples_with": 1217,
+      "samples_without": 63033
+    },
+    "has_ellipsis": {
+      "error_rate_with": 0.14285714285714285,
+      "error_rate_without": 0.10044674127920551,
+      "samples_with": 7,
+      "samples_without": 64243
+    },
+    "all_caps_words": {
+      "error_rate_with": 0.5683168316831683,
+      "error_rate_without": 0.06905829596412556,
+      "samples_with": 4040,
+      "samples_without": 60210
+    }
+  },
+  "confidence_analysis": {
+    "correct_mean_confidence": 0.88730388879776,
+    "incorrect_mean_confidence": 0.42754459381103516,
+    "high_confidence_errors": 625,
+    "high_confidence_errors_pct": 9.68391695072823
+  },
+  "summary": {
+    "total_samples": 64250,
+    "total_errors": 6454,
+    "overall_accuracy": 0.8995486381322957,
+    "overall_error_rate": 0.10045136186770429
+  }
+}

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Pipeline working data: per-video artefacts are derived, never committed.
+# The original repo committed 66 PNGs and 38 XLSX result files (13 MB), some
+# with Cyrillic filenames long enough to fail extraction on Linux.
+data/
+downloads/
+outputs/
+*.wav
+*.mp4
+*.webm
+*.mp3
+
+# Model weights: rebuilt by training/, never committed.
+models/
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.bin
+*.pkl
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+id_rsa*
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/

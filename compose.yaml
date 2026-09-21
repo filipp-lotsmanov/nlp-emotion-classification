@@ -1,0 +1,112 @@
+# ./scripts/setup_docker.sh          checks the host, builds, starts, waits for
+#                                    health. Use this one.
+#
+# docker compose up                  viewer + frontend. No GPU, no models,
+#                                    reads runs already in the volume. This is
+#                                    the demo, and it starts in seconds.
+#
+# docker compose --profile full up -d app frontend
+#                                    the full pipeline instead of the viewer,
+#                                    on the CPU. Several GB of image, ~4 GB of
+#                                    model downloads on first run.
+#                                    Name the services: `--profile full up` on
+#                                    its own would start the viewer as well and
+#                                    the two cannot both hold port 8000.
+#
+# docker compose -f compose.yaml -f compose.gpu.yaml --profile full up -d app frontend
+#                                    the same, with the card attached.
+#
+# The GPU reservation lives in the second file rather than in this one because
+# it is not a preference: with no NVIDIA adapter visible, the daemon refuses to
+# create the container at all -
+#
+#   nvidia-container-cli: initialization error: WSL environment detected but
+#   no adapters were found
+#
+# - so a laptop without a card could not start the pipeline at all. Opting in
+# is a flag; opting out was an edit.
+#
+#   frontend  http://127.0.0.1:3000
+#   API       http://127.0.0.1:8000/docs
+#
+# Everything publishes to 127.0.0.1 rather than to every interface, and that is
+# deliberate rather than cautious: the API has no authentication and it hands a
+# URL of the caller's choosing to yt-dlp, then spends hours of GPU on it.
+# Anyone who can reach port 8000 can do that. See src/vea/api/app.py.
+
+name: vea
+
+x-api-common: &api-common
+  build:
+    context: .
+  volumes:
+    # Runs, model cache and job records. The pipeline writes nowhere else, so
+    # this one volume is the whole of the state.
+    - vea-data:/data
+  environment:
+    VEA_DATA_DIR: /data
+    VEA_MODELS_DIR: /data/models
+    # Stage 5B. The default, nllb-3.3b, is ~17 GB of weights and wants 8 GB of
+    # VRAM. On a laptop set nllb-600m (~2.5 GB, runs on a CPU) here or in a
+    # .env file beside this one - quality drops, and the run finishes.
+    VEA_TRANSLATION_MODEL: ${VEA_TRANSLATION_MODEL:-nllb-3.3b}
+  restart: unless-stopped
+
+services:
+  # --- the default: read finished runs ---------------------------------------
+  viewer:
+    <<: *api-common
+    build:
+      context: .
+      target: viewer
+    image: vea:viewer
+    ports:
+      - "127.0.0.1:8000:8000"
+    # No `profiles`, so this is what a bare `docker compose up` starts.
+
+  # --- the full pipeline, on a card ------------------------------------------
+  # Same port, so the frontend's API URL does not change between the two. Only
+  # ever run one of them: name the services you want, because compose will
+  # refuse to bind 8000 twice if you start both.
+  app:
+    <<: *api-common
+    build:
+      context: .
+      target: app
+      args:
+        # 0 skips the CUDA 12 cuBLAS and cuDNN wheels and the ldconfig step
+        # they need - about 1.4 GB that only stage 4 on a card ever loads.
+        # Leave it at 1 anywhere with a GPU; set 0 for a CPU-only laptop.
+        CUDA_RUNTIME: ${CUDA_RUNTIME:-1}
+    image: vea:app
+    ports:
+      - "127.0.0.1:8000:8000"
+    # "gpu" is kept as an alias so older instructions still work, but the
+    # profile selects the full-pipeline image, not a card. The card is
+    # compose.gpu.yaml.
+    profiles: ["full", "gpu"]
+    # Whisper and NLLB are memory-hungry during load; the default 64 MB of
+    # shared memory is not enough for the dataloader workers.
+    shm_size: "2gb"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # A BUILD argument, not an environment variable. Next inlines
+        # NEXT_PUBLIC_* into the client bundle at build time, so setting it on
+        # the running container has no effect - the browser would keep using
+        # whatever was compiled in. Change it here and rebuild:
+        #
+        #   docker compose build frontend
+        #
+        # It must be the address *you* reach the API on, not the compose
+        # service name: the fetch happens in your browser, not in a container.
+        NEXT_PUBLIC_API_URL: "http://127.0.0.1:8000"
+    image: vea:web
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  vea-data:

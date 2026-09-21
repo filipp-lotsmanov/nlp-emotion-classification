@@ -1,0 +1,11 @@
+<!-- The tab icon, matching components/Logo.tsx: a speech waveform in the
+     pipeline's own emotion palette. Next serves this automatically from
+     app/icon.svg, which is also what stops the /favicon.ico 404. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#15181e"/>
+  <rect x="4"    y="13.5" width="3.4" height="5"  rx="1.7" fill="#95a5a6"/>
+  <rect x="9.3"  y="9"    width="3.4" height="14" rx="1.7" fill="#4a5bd0"/>
+  <rect x="14.6" y="5"    width="3.4" height="22" rx="1.7" fill="#ffd700"/>
+  <rect x="19.9" y="8"    width="3.4" height="16" rx="1.7" fill="#dc143c"/>
+  <rect x="25.2" y="12.5" width="3.4" height="7"  rx="1.7" fill="#9400d3"/>
+</svg>

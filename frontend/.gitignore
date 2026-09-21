@@ -1,0 +1,8 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+
+# package-lock.json is NOT ignored: the image builds with `npm ci`, which needs
+# it, and a floating resolve is not a reproducible build.
