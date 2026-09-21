@@ -45,12 +45,12 @@ case "$VARIANT" in
     default)
         ASSET="emotion-en-deberta-v1.tar.gz"
         DIRNAME="emotion-en-deberta"
-        TARBALL_SHA256="REPLACE_WITH_SHA256_OF_emotion-en-deberta-v1.tar.gz"
+        TARBALL_SHA256="91a8888d113fd513ab6a862fab5a9d819ca3dcb79cc51574e7d88e4bf96694a2"
         ;;
     balanced)
         ASSET="emotion-en-deberta-balanced-v1.tar.gz"
         DIRNAME="emotion-en-deberta-balanced"
-        TARBALL_SHA256="REPLACE_WITH_SHA256_OF_emotion-en-deberta-balanced-v1.tar.gz"
+        TARBALL_SHA256="89906154d6d85ed36aba3c2aa2228e515ade6a4ce24d06f212f8ebbc1e2e136d"
         ;;
 esac
 
