@@ -506,3 +506,55 @@ class TestTrainingWillNotClobberAProvenCheckpoint:
             )
             assert "already holds a checkpoint" not in result.stderr, args
             assert result.returncode != 3, args
+
+
+class TestShellScriptsStayExecutable:
+    """SETUP.md documents `./scripts/<name>.sh`, which mode 644 breaks.
+
+    Checked against git's index rather than the filesystem. Windows has no
+    execute bit and `os.access(X_OK)` answers True for everything there, so the
+    filesystem says nothing useful on one of the three CI platforms; the mode
+    git records is what a Linux or macOS clone actually gets.
+
+    This has regressed twice. A script edited outside git - downloaded through a
+    browser, copied off a share - arrives as 644 and is committed that way, and
+    the failure surfaces on a fresh clone as `Permission denied` naming a file
+    that is plainly present, which reads as a broken repository rather than a
+    file mode.
+    """
+
+    @staticmethod
+    def _index_modes() -> dict[str, str] | None:
+        """Git's recorded mode per path under scripts/, or None outside a repo."""
+        result = subprocess.run(
+            ["git", "ls-files", "-s", "--", "scripts"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        modes: dict[str, str] = {}
+        for line in result.stdout.splitlines():
+            # "<mode> <sha> <stage>\t<path>" - the path may contain spaces, so
+            # split on the tab rather than on whitespace.
+            meta, _, path = line.partition("\t")
+            if path:
+                modes[path] = meta.split()[0]
+        return modes
+
+    @pytest.mark.skipif(shutil.which("git") is None, reason="git not available")
+    def test_every_shell_script_is_committed_executable(self):
+        modes = self._index_modes()
+        if modes is None:
+            pytest.skip("not a git checkout")
+
+        scripts = {path: mode for path, mode in modes.items() if path.endswith(".sh")}
+        assert scripts, "no scripts/*.sh in the index; this test is looking in the wrong place"
+
+        plain = sorted(path for path, mode in scripts.items() if mode != "100755")
+        assert not plain, (
+            "committed non-executable, so a fresh clone fails with Permission denied "
+            f"on the command SETUP.md documents: {plain}. "
+            "Fix with: git update-index --chmod=+x <path>"
+        )
