@@ -536,7 +536,11 @@ translation, which is why one checkpoint legitimately serves both stage 6A and
 
 It is mirrored as a public GitHub release asset, repackaged as safetensors and
 pinned by digest, so it loads without unpickling a `.bin` out of a Google Drive
-folder. `scripts/fetch_va_checkpoint.sh` downloads it, checks
+folder. That mirror was originally the group member's repository linked above;
+it is now re-hosted as a release on this one, byte-identical — the digest below
+is unchanged and verifies both — so these instructions cannot be broken by
+someone else deleting their release.
+`scripts/fetch_va_checkpoint.sh` downloads it, checks
 `f75773cb738a8f279832b5dd8b24209c5b1c3c71d4eb09d97b2981ecc9041332`, deletes a
 mismatched file rather than caching it, and runs the contract check.
 

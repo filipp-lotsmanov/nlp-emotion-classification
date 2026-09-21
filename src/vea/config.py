@@ -177,9 +177,12 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
         ref="emotion-en-deberta",
         purpose="stage_7b_english_emotion, ensemble member 2",
         provenance=(
-            "MISSING FROM ARCHIVE. DeBERTa-V2-base fine-tuned on the cleaned "
-            "super-emotion set; specified in docs/model_cards/emotion_en_deberta.md. "
-            "Rebuild with: training/emotion_en_deberta/train.py"
+            "Missing from the archive and retrained for this project: "
+            "microsoft/deberta-v3-base fine-tuned on the cleaned super-emotion set, "
+            "to the specification in docs/model_cards/emotion_en_deberta.md. "
+            "Fetch it with scripts/fetch_emotion_en_checkpoint.sh, which pins the "
+            "release asset's sha256. Rebuild it with "
+            "training/emotion_en_deberta/train.py, which needs a GPU and several hours."
         ),
         license="CC-BY-SA-4.0 (inherited from cirimus/super-emotion)",
         # Trained on the twelve-step normalised corpus, so its inputs must be

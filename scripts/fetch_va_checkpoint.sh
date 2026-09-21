@@ -10,11 +10,13 @@
 # languages. It reads Russian without translation, which is why one checkpoint
 # can serve both stage 6A (Russian) and 6B (English).
 #
-# The mirror is a public GitHub release on a group member's repository, which
-# repackaged it as safetensors so it can be pinned by digest instead of
-# unpickling a .bin out of a Google Drive folder. No credential is involved.
-# The digest below is checked, and a mismatched download is deleted rather than
-# left to poison the next run as a cache hit.
+# It is mirrored as a release asset on this repository, repackaged as
+# safetensors so it can be pinned by digest instead of unpickling a .bin out of
+# a Google Drive folder. Hosting it here rather than pointing at a third party's
+# release means these setup instructions cannot be broken by someone else's
+# deletion. No credential is involved. The digest below is checked, and a
+# mismatched download is deleted rather than left to poison the next run as a
+# cache hit.
 #
 # Read docs/PROVENANCE.md section 11 before reporting anything derived from the
 # arousal output. It separates this project's seven classes at AUC 0.5734,
@@ -25,7 +27,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-RELEASE="https://github.com/alex-krasnoshtanov/Emotion-Timeline/releases/download/weights-va-v1"
+RELEASE="https://github.com/filipp-lotsmanov/nlp-emotion-classification/releases/download/weights-va-v1"
 WEIGHTS_SHA256="f75773cb738a8f279832b5dd8b24209c5b1c3c71d4eb09d97b2981ecc9041332"
 
 INTO=""

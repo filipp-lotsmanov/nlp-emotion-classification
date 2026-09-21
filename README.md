@@ -31,8 +31,16 @@ neither does the code that produced them:
 - **`va-xlmroberta-large`** (stages 6A and 6B) — an XLM-RoBERTa-large
   valence-arousal regressor. Stages 7A and 7B gate on its output, so everything
   from stage 6 onward is dead without it.
-- **`emotion-en-deberta`** (stage 7B) — the DeBERTa-V2 classifier documented in
+- **`emotion-en-deberta`** (stage 7B) — the DeBERTa classifier documented in
   [docs/model_cards/emotion_en_deberta.md](docs/model_cards/emotion_en_deberta.md).
+
+Both now exist. The first was found published upstream and the second was
+retrained here, and both are release assets on this repository:
+
+```bash
+./scripts/fetch_va_checkpoint.sh
+./scripts/fetch_emotion_en_checkpoint.sh
+```
 
 Check what your machine actually has:
 

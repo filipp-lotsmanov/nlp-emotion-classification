@@ -27,19 +27,32 @@ downloads itself from Hugging Face on first use.
 | Checkpoint | Directory | Where it comes from |
 |---|---|---|
 | `va-xlmroberta-large` | `models/xlmroberta-base-va/` | `scripts/fetch_va_checkpoint.sh` |
-| `emotion-en-deberta` | `models/emotion-en-deberta/` | `scripts/train_emotion_en.sh` (needs a GPU), or copy one |
+| `emotion-en-deberta` | `models/emotion-en-deberta/` | `scripts/fetch_emotion_en_checkpoint.sh` |
+
+Both are published as release assets on this repository, so neither needs a GPU
+and neither depends on anyone else's hosting staying up:
 
 ```bash
 ./scripts/fetch_va_checkpoint.sh
+./scripts/fetch_emotion_en_checkpoint.sh
 ```
 
-That downloads the published weights, verifies their SHA-256, patches the
-missing `id2label` into `config.json` and runs a contract check. On Windows,
-run it from **Git Bash**, not PowerShell.
+Each downloads the weights, verifies their SHA-256, and runs a contract check
+that loads the checkpoint rather than trusting the file to be what it claims. A
+mismatched download is deleted rather than left to be picked up as a cache hit
+on the next run. The VA script additionally patches the missing `id2label` into
+`config.json`. On Windows, run both from **Git Bash**, not PowerShell.
 
-`emotion-en-deberta` has to be trained or copied — there is no public download.
-Training takes a GPU and a few hours. If a teammate has one, copy the whole
-directory; it needs `config.json`, the weights and the tokenizer files.
+About 1.7 GB between them. Neither overwrites a checkpoint you already have —
+pass `--force` if replacing one is what you meant.
+
+`./scripts/fetch_emotion_en_checkpoint.sh --balanced` fetches a second,
+class-weighted run of the same model. No stage loads it; it is published so
+`training/emotion_en_deberta/compare_runs.py` can reproduce the class-weighting
+comparison without a GPU.
+
+To rebuild `emotion-en-deberta` from scratch instead, `scripts/train_emotion_en.sh`
+needs a GPU and several hours.
 
 Check what you have at any point:
 
