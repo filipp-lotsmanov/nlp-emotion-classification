@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
         --min-free) MIN_FREE_MIB="${2:?--min-free needs MiB}"; shift 2 ;;
         --dataset) DATASET="${2:?--dataset needs a value}"; shift 2 ;;
         --output) OUTPUT="${2:?--output needs a path}"; shift 2 ;;
-        -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) EXTRA_ARGS+=("$1"); shift ;;
     esac
 done

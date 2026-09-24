@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 import shutil
 import subprocess
 from functools import lru_cache
@@ -575,4 +576,61 @@ class TestShellScriptsStayExecutable:
             "committed non-executable, so a fresh clone fails with Permission denied "
             f"on the command SETUP.md documents: {plain}. "
             "Fix with: git update-index --chmod=+x <path>"
+        )
+
+
+class TestScriptHelpStaysInsideItsHeader:
+    """`--help` must print the header comment and stop at it.
+
+    Every script renders its own help with `sed -n '2,Np' "$0"`, which is a
+    line number that silently rots: add three lines to the header and the range
+    is short, delete some and it spills the code below into the help. Four of
+    the eight were spilling when this test was written, all printing
+    `set -euo pipefail` as if it were documentation - harmless, but it is the
+    first thing a new user sees and it reads as a broken script.
+
+    Asserted against the shape of the output rather than its wording, so it
+    stays true as the prose changes.
+    """
+
+    CODE = re.compile(r"^(set -|[A-Za-z_][A-Za-z0-9_]*=|while \[\[|if \[\[|case )")
+
+    @staticmethod
+    def _scripts() -> list[Path]:
+        return [
+            p
+            for p in sorted((REPO / "scripts").glob("*.sh"))
+            if "--help" in p.read_text(encoding="utf-8")
+        ]
+
+    def test_there_are_scripts_to_check(self):
+        assert self._scripts(), (
+            "no scripts/*.sh handle --help; this test is looking in the wrong place"
+        )
+
+    @pytest.mark.skipif(usable_bash() is None, reason="no working bash on this runner")
+    @pytest.mark.parametrize("script", [p.name for p in sorted((REPO / "scripts").glob("*.sh"))])
+    def test_help_exits_clean_and_prints_only_prose(self, script):
+        path = REPO / "scripts" / script
+        if "--help" not in path.read_text(encoding="utf-8"):
+            pytest.skip(f"{script} has no --help")
+
+        result = subprocess.run(
+            [usable_bash(), str(path), "--help"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=30,
+        )
+        assert result.returncode == 0, (result.returncode, result.stderr)
+
+        lines = result.stdout.splitlines()
+        assert lines, f"{script} --help printed nothing"
+
+        # The range running past the header is the failure this catches: the
+        # help then ends with shell that the reader is not meant to see.
+        spilled = [line for line in lines if self.CODE.match(line)]
+        assert not spilled, (
+            f"{script} --help prints code, so its `sed -n '2,Np'` range runs past "
+            f"the header comment: {spilled}"
         )

@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --into) INTO="${2:?--into needs a path}"; shift 2 ;;
         --no-env) WRITE_ENV=0; shift ;;
-        -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
     esac
 done

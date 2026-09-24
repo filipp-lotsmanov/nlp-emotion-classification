@@ -21,6 +21,11 @@
 #   uv                   not in the image; installed into the persistent mount,
 #                        so a restart needs `source /workspace/vea-env.sh`
 #                        rather than a reinstall.
+#   Node.js              only the Next.js frontend needs it, so a failure here
+#                        warns rather than aborts. Installed into the
+#                        persistent mount like uv, from the .tar.gz build: the
+#                        image has no xz, so the .tar.xz one cannot be
+#                        unpacked.
 #   GPU selection        the box is shared: 8 cards, several already heavily
 #                        allocated by other tenants. scripts/pick_free_gpu.sh
 #                        picks the emptiest one and fails fast if none is free.
@@ -37,7 +42,7 @@ while [[ $# -gt 0 ]]; do
         --train) TRAIN=1; shift ;;
         --persist-dir) PERSIST_DIR="${2:?--persist-dir needs a path}"; shift 2 ;;
         --min-free) MIN_FREE_MIB="${2:?--min-free needs a value in MiB}"; shift 2 ;;
-        -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "error: unknown argument '$1'" >&2; exit 2 ;;
     esac
 done
@@ -71,6 +76,7 @@ export HF_HOME="${PERSIST_DIR}/.cache/huggingface"
 export VEA_DATA_DIR="${PERSIST_DIR}/vea-data"
 export VEA_MODELS_DIR="${PERSIST_DIR}/vea-models"
 export VEA_DEVICE=auto
+export PATH="${PERSIST_DIR}/node/bin:\$PATH"
 EOF
 echo "wrote $ENV_FILE"
 # shellcheck disable=SC1090
@@ -114,6 +120,55 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+say "Node.js (frontend only)"
+# ---------------------------------------------------------------------------
+# Not fatal. `vea serve`, `vea run` and every test work without Node; only
+# frontend/ needs it. A box that cannot reach nodejs.org should still finish
+# this script with a working pipeline.
+#
+# Next 15 wants Node 20 or newer, which is why the version is checked rather
+# than just the binary's presence: the distro package on this image is older
+# than that and would fail at `next dev` with a message about the engine.
+NODE_MIN_MAJOR=20
+node_major() { node --version 2>/dev/null | sed 's/^v//; s/\..*//'; }
+
+if [[ -n "$(node_major)" ]] && (( "$(node_major)" >= NODE_MIN_MAJOR )); then
+    echo "node already on PATH: $(node --version), npm $(npm --version 2>/dev/null || echo '?')"
+elif ! command -v python3 >/dev/null 2>&1; then
+    echo "warning: python3 absent, cannot resolve the current Node LTS. Skipping; the frontend will not start." >&2
+else
+    # Resolved from the release index rather than pinned: a hardcoded version
+    # 404s the moment that release ages out of the mirror, and this script is
+    # re-run for months.
+    node_version="$(
+        curl -fsSL https://nodejs.org/dist/index.json 2>/dev/null \
+        | python3 -c "import json,sys;print(next(r['version'] for r in json.load(sys.stdin) if r['lts']))" 2>/dev/null
+    )" || node_version=""
+
+    if [[ -z "$node_version" ]]; then
+        echo "warning: could not resolve the current Node LTS. Skipping; the frontend will not start." >&2
+    else
+        # .tar.gz, not .tar.xz: this image ships no xz, and tar reports the
+        # failure as "xz: Cannot exec" three lines into an already-downloaded
+        # stream, which reads like a corrupt download rather than a missing
+        # package.
+        tarball="node-${node_version}-linux-x64.tar.gz"
+        echo "installing Node ${node_version} into ${PERSIST_DIR}/node"
+        if curl -fsSL "https://nodejs.org/dist/${node_version}/${tarball}" \
+             | tar -xz -C "$PERSIST_DIR"; then
+            rm -rf "${PERSIST_DIR}/node"
+            mv "${PERSIST_DIR}/node-${node_version}-linux-x64" "${PERSIST_DIR}/node"
+            export PATH="${PERSIST_DIR}/node/bin:$PATH"
+            hash -r
+            echo "installed node $(node --version), npm $(npm --version)"
+        else
+            rm -rf "${PERSIST_DIR}/node-${node_version}-linux-x64"
+            echo "warning: Node install failed. Skipping; the frontend will not start." >&2
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 say "GPU selection"
 # ---------------------------------------------------------------------------
 # Not exported into ENV_FILE on purpose: which GPU is free changes between
@@ -149,9 +204,30 @@ say "Verification"
 # ---------------------------------------------------------------------------
 uv run vea config
 echo
-uv run vea models || true   # exits non-zero while checkpoints are missing
+if uv run vea models; then
+    checkpoints_ok=1
+else
+    # Non-zero here means a stage's checkpoint is absent, which is a normal
+    # state on a fresh mount rather than a failure of this script.
+    checkpoints_ok=0
+fi
 echo
 echo "Done. In each new shell:"
 echo "  source ${ENV_FILE}"
 echo "  export CUDA_VISIBLE_DEVICES=\$(${REPO_ROOT}/scripts/pick_free_gpu.sh)"
+if (( ! checkpoints_ok )); then
+    echo
+    echo "Checkpoints are missing. Both are published as release assets:"
+    echo "  ./scripts/fetch_va_checkpoint.sh"
+    echo "  ./scripts/fetch_emotion_en_checkpoint.sh"
+    echo "About 1.7 GB, into ${PERSIST_DIR}/vea-models, which survives a restart."
+fi
+echo
+echo "To serve:"
+echo "  tmux new -s api  ->  uv run vea serve          (http://127.0.0.1:8000)"
+if command -v npm >/dev/null 2>&1; then
+    echo "  tmux new -s web  ->  cd frontend && npm install && npm run dev"
+else
+    echo "  frontend unavailable: Node was not installed, see the warning above"
+fi
 echo "Run long jobs under tmux so an SSH drop does not kill them."

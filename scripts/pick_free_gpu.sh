@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --min-free) MIN_FREE="${2:?--min-free needs a value in MiB}"; shift 2 ;;
         --list) LIST_ONLY=1; shift ;;
-        -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "error: unknown argument '$1'" >&2; exit 2 ;;
     esac
 done
