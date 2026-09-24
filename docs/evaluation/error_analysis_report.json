@@ -1,658 +1,800 @@
-{
-  "length_analysis": {
-    "correct_mean_length": 94.59838051076198,
-    "incorrect_mean_length": 80.04570808800744,
-    "correct_mean_words": 18.56320506609454,
-    "incorrect_mean_words": 15.354508831732259,
-    "mann_whitney_statistic": 212901925.5,
-    "mann_whitney_pvalue": 7.62670572857782e-78,
-    "significant": true
-  },
-  "vocabulary_analysis": {
-    "top_error_words": [
+[
+  {
+    "checkpoint": "emotion-en-deberta",
+    "class_weights": "none",
+    "seed": 42,
+    "val_fraction": 0.15,
+    "corpus": "/workspace/vea/corpora/super_emotion_clean.csv.gz",
+    "subsampled": false,
+    "n": 62862,
+    "errors": 5017,
+    "error_rate": 0.07980974197448379,
+    "metrics": {
+      "accuracy": 0.9201902580255162,
+      "macro_f1": 0.8162103222296866,
+      "macro_precision": 0.8293627992551323,
+      "macro_recall": 0.8054273195269852,
+      "weighted_f1": 0.9192865404216845,
+      "n": 62862,
+      "per_class": {
+        "anger": {
+          "precision": 0.9297632468996618,
+          "recall": 0.9486943517772921,
+          "f1": 0.9391334054546491,
+          "support": 8693,
+          "predicted": 8870
+        },
+        "disgust": {
+          "precision": 0.677027027027027,
+          "recall": 0.6489637305699482,
+          "f1": 0.6626984126984127,
+          "support": 772,
+          "predicted": 740
+        },
+        "fear": {
+          "precision": 0.8426445474505977,
+          "recall": 0.8637159289822456,
+          "f1": 0.8530501358360089,
+          "support": 7998,
+          "predicted": 8198
+        },
+        "joy": {
+          "precision": 0.9512808077245272,
+          "recall": 0.9728559834069799,
+          "f1": 0.9619474352972648,
+          "support": 22178,
+          "predicted": 22681
+        },
+        "neutral": {
+          "precision": 0.5873269435569755,
+          "recall": 0.5495764823119084,
+          "f1": 0.5678249678249678,
+          "support": 2007,
+          "predicted": 1878
+        },
+        "sadness": {
+          "precision": 0.9621735376645801,
+          "recall": 0.9463432756607579,
+          "f1": 0.9541927543211859,
+          "support": 18842,
+          "predicted": 18532
+        },
+        "surprise": {
+          "precision": 0.8553234844625573,
+          "recall": 0.7078414839797639,
+          "f1": 0.7746251441753172,
+          "support": 2372,
+          "predicted": 1963
+        }
+      },
+      "confusion": [
+        [
+          8247,
+          51,
+          148,
+          62,
+          60,
+          101,
+          24
+        ],
+        [
+          51,
+          501,
+          77,
+          45,
+          30,
+          54,
+          14
+        ],
+        [
+          191,
+          54,
+          6908,
+          235,
+          205,
+          278,
+          127
+        ],
+        [
+          52,
+          32,
+          124,
+          21576,
+          259,
+          91,
+          44
+        ],
+        [
+          57,
+          34,
+          217,
+          407,
+          1103,
+          138,
+          51
+        ],
+        [
+          248,
+          57,
+          448,
+          106,
+          128,
+          17831,
+          24
+        ],
+        [
+          24,
+          11,
+          276,
+          250,
+          93,
+          39,
+          1679
+        ]
+      ],
+      "micro_f1": 0.9201902580255162
+    },
+    "confusion": {
+      "labels": [
+        "anger",
+        "disgust",
+        "fear",
+        "joy",
+        "neutral",
+        "sadness",
+        "surprise"
+      ],
+      "matrix": [
+        [
+          8247,
+          51,
+          148,
+          62,
+          60,
+          101,
+          24
+        ],
+        [
+          51,
+          501,
+          77,
+          45,
+          30,
+          54,
+          14
+        ],
+        [
+          191,
+          54,
+          6908,
+          235,
+          205,
+          278,
+          127
+        ],
+        [
+          52,
+          32,
+          124,
+          21576,
+          259,
+          91,
+          44
+        ],
+        [
+          57,
+          34,
+          217,
+          407,
+          1103,
+          138,
+          51
+        ],
+        [
+          248,
+          57,
+          448,
+          106,
+          128,
+          17831,
+          24
+        ],
+        [
+          24,
+          11,
+          276,
+          250,
+          93,
+          39,
+          1679
+        ]
+      ]
+    },
+    "top_confusions": {
+      "anger": [
+        {
+          "predicted": "fear",
+          "count": 148,
+          "share_of_class": 0.01702519268376855
+        },
+        {
+          "predicted": "sadness",
+          "count": 101,
+          "share_of_class": 0.011618543655815024
+        },
+        {
+          "predicted": "joy",
+          "count": 62,
+          "share_of_class": 0.007132175313470608
+        }
+      ],
+      "disgust": [
+        {
+          "predicted": "fear",
+          "count": 77,
+          "share_of_class": 0.09974093264248704
+        },
+        {
+          "predicted": "sadness",
+          "count": 54,
+          "share_of_class": 0.06994818652849741
+        },
+        {
+          "predicted": "anger",
+          "count": 51,
+          "share_of_class": 0.06606217616580311
+        }
+      ],
+      "fear": [
+        {
+          "predicted": "sadness",
+          "count": 278,
+          "share_of_class": 0.0347586896724181
+        },
+        {
+          "predicted": "joy",
+          "count": 235,
+          "share_of_class": 0.0293823455863966
+        },
+        {
+          "predicted": "neutral",
+          "count": 205,
+          "share_of_class": 0.02563140785196299
+        }
+      ],
+      "joy": [
+        {
+          "predicted": "neutral",
+          "count": 259,
+          "share_of_class": 0.011678239696997024
+        },
+        {
+          "predicted": "fear",
+          "count": 124,
+          "share_of_class": 0.005591126341419425
+        },
+        {
+          "predicted": "sadness",
+          "count": 91,
+          "share_of_class": 0.004103165298944901
+        }
+      ],
+      "neutral": [
+        {
+          "predicted": "joy",
+          "count": 407,
+          "share_of_class": 0.2027902341803687
+        },
+        {
+          "predicted": "fear",
+          "count": 217,
+          "share_of_class": 0.1081215744892875
+        },
+        {
+          "predicted": "sadness",
+          "count": 138,
+          "share_of_class": 0.0687593423019432
+        }
+      ],
+      "sadness": [
+        {
+          "predicted": "fear",
+          "count": 448,
+          "share_of_class": 0.023776669143403036
+        },
+        {
+          "predicted": "anger",
+          "count": 248,
+          "share_of_class": 0.013162084704383823
+        },
+        {
+          "predicted": "neutral",
+          "count": 128,
+          "share_of_class": 0.006793334040972296
+        }
+      ],
+      "surprise": [
+        {
+          "predicted": "fear",
+          "count": 276,
+          "share_of_class": 0.1163575042158516
+        },
+        {
+          "predicted": "joy",
+          "count": 250,
+          "share_of_class": 0.10539629005059022
+        },
+        {
+          "predicted": "neutral",
+          "count": 93,
+          "share_of_class": 0.03920741989881956
+        }
+      ]
+    },
+    "length": {
+      "correct_mean_chars": 94.25689342207623,
+      "incorrect_mean_chars": 76.86147099860474,
+      "correct_mean_words": 18.603301927565045,
+      "incorrect_mean_words": 14.745465417580228,
+      "correct_median_words": 16.0,
+      "incorrect_median_words": 13.0
+    },
+    "confidence": {
+      "correct_mean": 0.9765030450662341,
+      "incorrect_mean": 0.6461064687152058,
+      "below_stage8_threshold": 0.00033406509496993413,
+      "accuracy_above_threshold": 0.9204659378431279,
+      "share_of_errors_above_threshold": 0.9962128762208491
+    },
+    "threshold_sweep": [
       {
-        "word": "yemen",
-        "freq_correct": 0,
-        "freq_incorrect": 5,
-        "total_freq": 5,
-        "error_ratio": Infinity
+        "threshold": 0.25,
+        "coverage": 0.9996659349050301,
+        "accuracy_kept": 0.9204659378431279,
+        "errors_removed": 0.003787123779150887,
+        "correct_removed": 3.457515774915723e-05
       },
       {
-        "word": "swine",
-        "freq_correct": 0,
-        "freq_incorrect": 5,
-        "total_freq": 5,
-        "error_ratio": Infinity
+        "threshold": 0.5,
+        "coverage": 0.9756768795138557,
+        "accuracy_kept": 0.9353203006538079,
+        "errors_removed": 0.20928841937412795,
+        "correct_removed": 0.008280750280923156
       },
       {
-        "word": "macbook",
-        "freq_correct": 0,
-        "freq_incorrect": 6,
-        "total_freq": 6,
-        "error_ratio": Infinity
+        "threshold": 0.6,
+        "coverage": 0.9326302058477299,
+        "accuracy_kept": 0.9573063605505996,
+        "errors_removed": 0.5010962726729121,
+        "correct_removed": 0.0297519232431498
       },
       {
-        "word": "prejudiced",
-        "freq_correct": 0,
-        "freq_incorrect": 11,
-        "total_freq": 11,
-        "error_ratio": Infinity
+        "threshold": 0.7,
+        "coverage": 0.915640609589259,
+        "accuracy_kept": 0.9666081759585816,
+        "errors_removed": 0.6169025313932629,
+        "correct_removed": 0.038170974155069586
       },
       {
-        "word": "twitterland",
-        "freq_correct": 0,
-        "freq_incorrect": 5,
-        "total_freq": 5,
-        "error_ratio": Infinity
+        "threshold": 0.8,
+        "coverage": 0.8983169482358181,
+        "accuracy_kept": 0.9757747476536214,
+        "errors_removed": 0.7273270879011361,
+        "correct_removed": 0.047419828852969144
       },
       {
-        "word": "madden",
-        "freq_correct": 1,
-        "freq_incorrect": 5,
-        "total_freq": 6,
-        "error_ratio": 52.514056460114794
+        "threshold": 0.9,
+        "coverage": 0.8756482453628583,
+        "accuracy_kept": 0.9869561268053411,
+        "errors_removed": 0.8568865856089296,
+        "correct_removed": 0.060817702480767566
       },
       {
-        "word": "besties",
-        "freq_correct": 1,
-        "freq_incorrect": 5,
-        "total_freq": 6,
-        "error_ratio": 52.514056460114794
-      },
-      {
-        "word": "whyy",
-        "freq_correct": 1,
-        "freq_incorrect": 5,
-        "total_freq": 6,
-        "error_ratio": 52.514056460114794
-      },
-      {
-        "word": "yeah",
-        "freq_correct": 2,
-        "freq_incorrect": 9,
-        "total_freq": 11,
-        "error_ratio": 47.26265081410332
-      },
-      {
-        "word": "hollie",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "jenn",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "ughh",
-        "freq_correct": 2,
-        "freq_incorrect": 8,
-        "total_freq": 10,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "yer",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "sux",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "9am",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "ahaha",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "2morrow",
-        "freq_correct": 1,
-        "freq_incorrect": 4,
-        "total_freq": 5,
-        "error_ratio": 42.01124516809183
-      },
-      {
-        "word": "ouch",
-        "freq_correct": 2,
-        "freq_incorrect": 7,
-        "total_freq": 9,
-        "error_ratio": 36.759839522080355
-      },
-      {
-        "word": "ima",
-        "freq_correct": 2,
-        "freq_incorrect": 7,
-        "total_freq": 9,
-        "error_ratio": 36.759839522080355
-      },
-      {
-        "word": "gutted",
-        "freq_correct": 2,
-        "freq_incorrect": 6,
-        "total_freq": 8,
-        "error_ratio": 31.508433876068878
-      },
-      {
-        "word": "hee",
-        "freq_correct": 2,
-        "freq_incorrect": 6,
-        "total_freq": 8,
-        "error_ratio": 31.508433876068878
-      },
-      {
-        "word": "lol",
-        "freq_correct": 4,
-        "freq_incorrect": 11,
-        "total_freq": 15,
-        "error_ratio": 28.88273105306314
-      },
-      {
-        "word": "boo",
-        "freq_correct": 10,
-        "freq_incorrect": 26,
-        "total_freq": 36,
-        "error_ratio": 27.30730935925969
-      },
-      {
-        "word": "3rd",
-        "freq_correct": 2,
-        "freq_incorrect": 5,
-        "total_freq": 7,
-        "error_ratio": 26.257028230057397
-      },
-      {
-        "word": "noo",
-        "freq_correct": 7,
-        "freq_incorrect": 17,
-        "total_freq": 24,
-        "error_ratio": 25.50682742348433
-      },
-      {
-        "word": "outta",
-        "freq_correct": 3,
-        "freq_incorrect": 7,
-        "total_freq": 10,
-        "error_ratio": 24.506559681386904
-      },
-      {
-        "word": "hun",
-        "freq_correct": 3,
-        "freq_incorrect": 6,
-        "total_freq": 9,
-        "error_ratio": 21.005622584045916
-      },
-      {
-        "word": "battery",
-        "freq_correct": 3,
-        "freq_incorrect": 6,
-        "total_freq": 9,
-        "error_ratio": 21.005622584045916
-      },
-      {
-        "word": "wit",
-        "freq_correct": 3,
-        "freq_incorrect": 6,
-        "total_freq": 9,
-        "error_ratio": 21.005622584045916
-      },
-      {
-        "word": "canceled",
-        "freq_correct": 2,
-        "freq_incorrect": 4,
-        "total_freq": 6,
-        "error_ratio": 21.005622584045916
-      }
-    ],
-    "top_correct_words": [
-      {
-        "word": "oftentimes",
-        "freq_correct": 8,
-        "freq_incorrect": 0,
-        "total_freq": 8,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "devotion",
-        "freq_correct": 9,
-        "freq_incorrect": 0,
-        "total_freq": 9,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "competent",
-        "freq_correct": 10,
-        "freq_incorrect": 0,
-        "total_freq": 10,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "persistence",
-        "freq_correct": 5,
-        "freq_incorrect": 0,
-        "total_freq": 5,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "challenges",
-        "freq_correct": 28,
-        "freq_incorrect": 0,
-        "total_freq": 28,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "humbled",
-        "freq_correct": 20,
-        "freq_incorrect": 0,
-        "total_freq": 20,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "almond",
-        "freq_correct": 9,
-        "freq_incorrect": 0,
-        "total_freq": 9,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "practical",
-        "freq_correct": 8,
-        "freq_incorrect": 0,
-        "total_freq": 8,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "assumption",
-        "freq_correct": 5,
-        "freq_incorrect": 0,
-        "total_freq": 5,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "heritage",
-        "freq_correct": 5,
-        "freq_incorrect": 0,
-        "total_freq": 5,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "engaged",
-        "freq_correct": 11,
-        "freq_incorrect": 0,
-        "total_freq": 11,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "lifes",
-        "freq_correct": 8,
-        "freq_incorrect": 0,
-        "total_freq": 8,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "pierce",
-        "freq_correct": 6,
-        "freq_incorrect": 0,
-        "total_freq": 6,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "caffeine",
-        "freq_correct": 13,
-        "freq_incorrect": 0,
-        "total_freq": 13,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "renewed",
-        "freq_correct": 5,
-        "freq_incorrect": 0,
-        "total_freq": 5,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "alpha",
-        "freq_correct": 5,
-        "freq_incorrect": 0,
-        "total_freq": 5,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "disbelief",
-        "freq_correct": 8,
-        "freq_incorrect": 0,
-        "total_freq": 8,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "perspective",
-        "freq_correct": 35,
-        "freq_incorrect": 0,
-        "total_freq": 35,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "chunk",
-        "freq_correct": 16,
-        "freq_incorrect": 0,
-        "total_freq": 16,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "sceptical",
-        "freq_correct": 13,
-        "freq_incorrect": 0,
-        "total_freq": 13,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "winner",
-        "freq_correct": 14,
-        "freq_incorrect": 0,
-        "total_freq": 14,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "poses",
-        "freq_correct": 7,
-        "freq_incorrect": 0,
-        "total_freq": 7,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "troll",
-        "freq_correct": 7,
-        "freq_incorrect": 0,
-        "total_freq": 7,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "vocal",
-        "freq_correct": 7,
-        "freq_incorrect": 0,
-        "total_freq": 7,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "surrounding",
-        "freq_correct": 16,
-        "freq_incorrect": 0,
-        "total_freq": 16,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "cockroaches",
-        "freq_correct": 7,
-        "freq_incorrect": 0,
-        "total_freq": 7,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "approaching",
-        "freq_correct": 11,
-        "freq_incorrect": 0,
-        "total_freq": 11,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "optimistic",
-        "freq_correct": 216,
-        "freq_incorrect": 0,
-        "total_freq": 216,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "overboard",
-        "freq_correct": 6,
-        "freq_incorrect": 0,
-        "total_freq": 6,
-        "error_ratio": 0.0
-      },
-      {
-        "word": "wholly",
-        "freq_correct": 7,
-        "freq_incorrect": 0,
-        "total_freq": 7,
-        "error_ratio": 0.0
+        "threshold": 0.95,
+        "coverage": 0.8584041233177436,
+        "accuracy_kept": 0.9932358555252868,
+        "errors_removed": 0.9272473589794697,
+        "correct_removed": 0.07345492263808454
       }
     ]
   },
-  "class_confusion": {
-    "class_errors": [
-      {
-        "emotion": "Anger",
-        "total_samples": 8695,
-        "errors": 538,
-        "error_rate": 0.06187464059804485,
-        "most_confused_with": {
-          "Disgust": 185,
-          "Neutral": 126,
-          "Sadness": 125
+  {
+    "checkpoint": "emotion-en-deberta-balanced",
+    "class_weights": "balanced",
+    "seed": 42,
+    "val_fraction": 0.15,
+    "corpus": "/workspace/vea/corpora/super_emotion_clean.csv.gz",
+    "subsampled": false,
+    "n": 62862,
+    "errors": 5201,
+    "error_rate": 0.08273678852088702,
+    "metrics": {
+      "accuracy": 0.9172632114791129,
+      "macro_f1": 0.8224834680664791,
+      "macro_precision": 0.8036520594055652,
+      "macro_recall": 0.8480334785753653,
+      "weighted_f1": 0.9207035871409448,
+      "n": 62862,
+      "per_class": {
+        "anger": {
+          "precision": 0.9395725014442519,
+          "recall": 0.9354653169216611,
+          "f1": 0.9375144108830988,
+          "support": 8693,
+          "predicted": 8655
+        },
+        "disgust": {
+          "precision": 0.6423611111111112,
+          "recall": 0.7189119170984456,
+          "f1": 0.6784841075794622,
+          "support": 772,
+          "predicted": 864
+        },
+        "fear": {
+          "precision": 0.8193297144205806,
+          "recall": 0.8680920230057514,
+          "f1": 0.843006313744536,
+          "support": 7998,
+          "predicted": 8474
+        },
+        "joy": {
+          "precision": 0.9675609088420476,
+          "recall": 0.9562178735684012,
+          "f1": 0.9618559506531205,
+          "support": 22178,
+          "predicted": 21918
+        },
+        "neutral": {
+          "precision": 0.4945709281961471,
+          "recall": 0.7035376183358246,
+          "f1": 0.5808309337721104,
+          "support": 2007,
+          "predicted": 2855
+        },
+        "sadness": {
+          "precision": 0.9949817518248175,
+          "recall": 0.926016346460036,
+          "f1": 0.9592610918687119,
+          "support": 18842,
+          "predicted": 17536
+        },
+        "surprise": {
+          "precision": 0.7671875,
+          "recall": 0.8279932546374368,
+          "f1": 0.7964314679643147,
+          "support": 2372,
+          "predicted": 2560
         }
       },
-      {
-        "emotion": "Disgust",
-        "total_samples": 2147,
-        "errors": 181,
-        "error_rate": 0.08430367955286447,
-        "most_confused_with": {
-          "Neutral": 49,
-          "Anger": 48,
-          "Sadness": 36
+      "confusion": [
+        [
+          8132,
+          56,
+          309,
+          43,
+          114,
+          10,
+          29
+        ],
+        [
+          30,
+          555,
+          76,
+          48,
+          40,
+          10,
+          13
+        ],
+        [
+          75,
+          72,
+          6943,
+          183,
+          345,
+          31,
+          349
+        ],
+        [
+          61,
+          53,
+          133,
+          21207,
+          559,
+          20,
+          145
+        ],
+        [
+          41,
+          44,
+          243,
+          222,
+          1412,
+          13,
+          32
+        ],
+        [
+          294,
+          73,
+          687,
+          90,
+          222,
+          17448,
+          28
+        ],
+        [
+          22,
+          11,
+          83,
+          125,
+          163,
+          4,
+          1964
+        ]
+      ],
+      "micro_f1": 0.9172632114791129
+    },
+    "confusion": {
+      "labels": [
+        "anger",
+        "disgust",
+        "fear",
+        "joy",
+        "neutral",
+        "sadness",
+        "surprise"
+      ],
+      "matrix": [
+        [
+          8132,
+          56,
+          309,
+          43,
+          114,
+          10,
+          29
+        ],
+        [
+          30,
+          555,
+          76,
+          48,
+          40,
+          10,
+          13
+        ],
+        [
+          75,
+          72,
+          6943,
+          183,
+          345,
+          31,
+          349
+        ],
+        [
+          61,
+          53,
+          133,
+          21207,
+          559,
+          20,
+          145
+        ],
+        [
+          41,
+          44,
+          243,
+          222,
+          1412,
+          13,
+          32
+        ],
+        [
+          294,
+          73,
+          687,
+          90,
+          222,
+          17448,
+          28
+        ],
+        [
+          22,
+          11,
+          83,
+          125,
+          163,
+          4,
+          1964
+        ]
+      ]
+    },
+    "top_confusions": {
+      "anger": [
+        {
+          "predicted": "fear",
+          "count": 309,
+          "share_of_class": 0.0355458414816519
+        },
+        {
+          "predicted": "neutral",
+          "count": 114,
+          "share_of_class": 0.01311399976992983
+        },
+        {
+          "predicted": "disgust",
+          "count": 56,
+          "share_of_class": 0.0064419647992637755
         }
-      },
-      {
-        "emotion": "Fear",
-        "total_samples": 8003,
-        "errors": 1990,
-        "error_rate": 0.248656753717356,
-        "most_confused_with": {
-          "Sadness": 535,
-          "Neutral": 383,
-          "Disgust": 316
+      ],
+      "disgust": [
+        {
+          "predicted": "fear",
+          "count": 76,
+          "share_of_class": 0.09844559585492228
+        },
+        {
+          "predicted": "joy",
+          "count": 48,
+          "share_of_class": 0.06217616580310881
+        },
+        {
+          "predicted": "neutral",
+          "count": 40,
+          "share_of_class": 0.05181347150259067
         }
-      },
-      {
-        "emotion": "Joy",
-        "total_samples": 22181,
-        "errors": 1389,
-        "error_rate": 0.06262116225598485,
-        "most_confused_with": {
-          "Neutral": 638,
-          "Sadness": 243,
-          "Disgust": 169
+      ],
+      "fear": [
+        {
+          "predicted": "surprise",
+          "count": 349,
+          "share_of_class": 0.043635908977244314
+        },
+        {
+          "predicted": "neutral",
+          "count": 345,
+          "share_of_class": 0.043135783945986494
+        },
+        {
+          "predicted": "joy",
+          "count": 183,
+          "share_of_class": 0.02288072018004501
         }
-      },
-      {
-        "emotion": "Neutral",
-        "total_samples": 2010,
-        "errors": 739,
-        "error_rate": 0.36766169154228856,
-        "most_confused_with": {
-          "Joy": 269,
-          "Disgust": 239,
-          "Sadness": 134
+      ],
+      "joy": [
+        {
+          "predicted": "neutral",
+          "count": 559,
+          "share_of_class": 0.025205158264947247
+        },
+        {
+          "predicted": "surprise",
+          "count": 145,
+          "share_of_class": 0.00653801064117594
+        },
+        {
+          "predicted": "fear",
+          "count": 133,
+          "share_of_class": 0.005996933898457932
         }
-      },
-      {
-        "emotion": "Sadness",
-        "total_samples": 18842,
-        "errors": 1079,
-        "error_rate": 0.05726568304850865,
-        "most_confused_with": {
-          "Anger": 290,
-          "Disgust": 274,
-          "Neutral": 241
+      ],
+      "neutral": [
+        {
+          "predicted": "fear",
+          "count": 243,
+          "share_of_class": 0.1210762331838565
+        },
+        {
+          "predicted": "joy",
+          "count": 222,
+          "share_of_class": 0.11061285500747384
+        },
+        {
+          "predicted": "disgust",
+          "count": 44,
+          "share_of_class": 0.02192326856003986
         }
-      },
-      {
-        "emotion": "Surprise",
-        "total_samples": 2372,
-        "errors": 538,
-        "error_rate": 0.22681281618887014,
-        "most_confused_with": {
-          "Neutral": 156,
-          "Joy": 155,
-          "Disgust": 93
+      ],
+      "sadness": [
+        {
+          "predicted": "fear",
+          "count": 687,
+          "share_of_class": 0.03646109754803099
+        },
+        {
+          "predicted": "anger",
+          "count": 294,
+          "share_of_class": 0.015603439125358243
+        },
+        {
+          "predicted": "neutral",
+          "count": 222,
+          "share_of_class": 0.011782188727311326
         }
-      }
-    ],
-    "top_confusion_pairs": [
+      ],
+      "surprise": [
+        {
+          "predicted": "neutral",
+          "count": 163,
+          "share_of_class": 0.06871838111298482
+        },
+        {
+          "predicted": "joy",
+          "count": 125,
+          "share_of_class": 0.05269814502529511
+        },
+        {
+          "predicted": "fear",
+          "count": 83,
+          "share_of_class": 0.03499156829679595
+        }
+      ]
+    },
+    "length": {
+      "correct_mean_chars": 94.33547805275663,
+      "incorrect_mean_chars": 76.60565275908479,
+      "correct_mean_words": 18.619968436204715,
+      "incorrect_mean_words": 14.697173620457605,
+      "correct_median_words": 17.0,
+      "incorrect_median_words": 13.0
+    },
+    "confidence": {
+      "correct_mean": 0.9776620992257186,
+      "incorrect_mean": 0.6496243602299869,
+      "below_stage8_threshold": 0.000381788679965639,
+      "accuracy_above_threshold": 0.9175021483815525,
+      "share_of_errors_above_threshold": 0.9967313978081138
+    },
+    "threshold_sweep": [
       {
-        "label": "Joy",
-        "predicted_label": "Neutral",
-        "count": 638
+        "threshold": 0.25,
+        "coverage": 0.9996182113200344,
+        "accuracy_kept": 0.9175021483815525,
+        "errors_removed": 0.0032686021918861756,
+        "correct_removed": 0.00012139921263939231
       },
       {
-        "label": "Fear",
-        "predicted_label": "Sadness",
-        "count": 535
+        "threshold": 0.5,
+        "coverage": 0.9665616747796761,
+        "accuracy_kept": 0.9378044766293614,
+        "errors_removed": 0.2734089598154201,
+        "correct_removed": 0.011793066370683825
       },
       {
-        "label": "Fear",
-        "predicted_label": "Neutral",
-        "count": 383
+        "threshold": 0.6,
+        "coverage": 0.9445611020966561,
+        "accuracy_kept": 0.9503343045286896,
+        "errors_removed": 0.4329936550663334,
+        "correct_removed": 0.021383604169195818
       },
       {
-        "label": "Fear",
-        "predicted_label": "Disgust",
-        "count": 316
+        "threshold": 0.7,
+        "coverage": 0.9249944322484172,
+        "accuracy_kept": 0.9606514523535178,
+        "errors_removed": 0.5600845991155547,
+        "correct_removed": 0.03125162588231214
       },
       {
-        "label": "Fear",
-        "predicted_label": "Surprise",
-        "count": 315
+        "threshold": 0.8,
+        "coverage": 0.8910788711781362,
+        "accuracy_kept": 0.9773275015620816,
+        "errors_removed": 0.7558161891943856,
+        "correct_removed": 0.05057144343663828
       },
       {
-        "label": "Sadness",
-        "predicted_label": "Anger",
-        "count": 290
+        "threshold": 0.9,
+        "coverage": 0.8739938277496739,
+        "accuracy_kept": 0.9848200797218835,
+        "errors_removed": 0.8396462218804076,
+        "correct_removed": 0.06163611453148575
       },
       {
-        "label": "Sadness",
-        "predicted_label": "Disgust",
-        "count": 274
-      },
-      {
-        "label": "Neutral",
-        "predicted_label": "Joy",
-        "count": 269
-      },
-      {
-        "label": "Joy",
-        "predicted_label": "Sadness",
-        "count": 243
-      },
-      {
-        "label": "Sadness",
-        "predicted_label": "Neutral",
-        "count": 241
-      },
-      {
-        "label": "Neutral",
-        "predicted_label": "Disgust",
-        "count": 239
-      },
-      {
-        "label": "Fear",
-        "predicted_label": "Anger",
-        "count": 235
-      },
-      {
-        "label": "Fear",
-        "predicted_label": "Joy",
-        "count": 206
-      },
-      {
-        "label": "Anger",
-        "predicted_label": "Disgust",
-        "count": 185
-      },
-      {
-        "label": "Joy",
-        "predicted_label": "Disgust",
-        "count": 169
-      },
-      {
-        "label": "Sadness",
-        "predicted_label": "Joy",
-        "count": 166
-      },
-      {
-        "label": "Surprise",
-        "predicted_label": "Neutral",
-        "count": 156
-      },
-      {
-        "label": "Surprise",
-        "predicted_label": "Joy",
-        "count": 155
-      },
-      {
-        "label": "Joy",
-        "predicted_label": "Anger",
-        "count": 148
-      },
-      {
-        "label": "Neutral",
-        "predicted_label": "Sadness",
-        "count": 134
+        "threshold": 0.95,
+        "coverage": 0.8626515223823613,
+        "accuracy_kept": 0.9899129600944162,
+        "errors_removed": 0.8948279177081331,
+        "correct_removed": 0.06902412375782592
       }
     ]
-  },
-  "textual_features": {
-    "has_exclamation": {
-      "error_rate_with": 0.5660893345487694,
-      "error_rate_without": 0.08398865540801856,
-      "samples_with": 2194,
-      "samples_without": 62056
-    },
-    "has_question": {
-      "error_rate_with": 0.5579293344289236,
-      "error_rate_without": 0.09161867593165485,
-      "samples_with": 1217,
-      "samples_without": 63033
-    },
-    "has_ellipsis": {
-      "error_rate_with": 0.14285714285714285,
-      "error_rate_without": 0.10044674127920551,
-      "samples_with": 7,
-      "samples_without": 64243
-    },
-    "all_caps_words": {
-      "error_rate_with": 0.5683168316831683,
-      "error_rate_without": 0.06905829596412556,
-      "samples_with": 4040,
-      "samples_without": 60210
-    }
-  },
-  "confidence_analysis": {
-    "correct_mean_confidence": 0.88730388879776,
-    "incorrect_mean_confidence": 0.42754459381103516,
-    "high_confidence_errors": 625,
-    "high_confidence_errors_pct": 9.68391695072823
-  },
-  "summary": {
-    "total_samples": 64250,
-    "total_errors": 6454,
-    "overall_accuracy": 0.8995486381322957,
-    "overall_error_rate": 0.10045136186770429
   }
-}
+]

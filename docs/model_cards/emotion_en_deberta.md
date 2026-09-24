@@ -302,7 +302,7 @@ Evaluation on 2,000 samples from the CARER emotion dataset, containing 5 emotion
 
 **Strong Performance**
 
-- Excellent overall accuracy (**89.95%**) with especially high results for **joy (F1: 0.9481)**, **sadness (F1: 0.9412)**, and **anger (F1: 0.9250)**.  
+- Excellent overall accuracy (**89.95%** for this checkpoint; **92.02%** after the 2026-09-16 retrain) with especially high results for **joy (F1: 0.9481)**, **sadness (F1: 0.9412)**, and **anger (F1: 0.9250)**.  
 - ~~Robust generalization to unseen data: **CARER accuracy 92.55%**, indicating strong transfer beyond the training domain.~~ **Withdrawn:** CARER is 83% of the training data, so 92.55% measures in-distribution fit, not transfer. See the note above that table. No evidence of generalisation beyond the training domain is available for this model.
 
 **Class Imbalance Impact**

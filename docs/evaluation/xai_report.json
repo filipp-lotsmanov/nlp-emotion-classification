@@ -1,0 +1,1012 @@
+{
+  "checkpoint": "/workspace/vea-models/emotion-en-deberta",
+  "activation": "softmax",
+  "n_steps": 300,
+  "device": "cuda",
+  "emotions": {
+    "joy": {
+      "sentences": [
+        {
+          "sentence": "Everything worked out perfectly \u2014 we did it!",
+          "predicted_class": 3,
+          "initial_confidence": 0.999356210231781,
+          "convergence_delta": 2.1369147300720215,
+          "abc": 1.3135877698659897,
+          "attributions": [
+            {
+              "token": "\u2581perfectly",
+              "score": 0.9211027026176453
+            },
+            {
+              "token": "\u2581Everything",
+              "score": 0.699964165687561
+            },
+            {
+              "token": "\u2581worked",
+              "score": 0.6198393106460571
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 0.5745513439178467
+            },
+            {
+              "token": "!",
+              "score": 0.550216555595398
+            },
+            {
+              "token": "\u2581did",
+              "score": 0.449641615152359
+            },
+            {
+              "token": "\u2581out",
+              "score": 0.41787102818489075
+            },
+            {
+              "token": "\u2581it",
+              "score": 0.39814674854278564
+            },
+            {
+              "token": "\u2581we",
+              "score": 0.3016122579574585
+            }
+          ]
+        },
+        {
+          "sentence": "Come on, it's all fine!",
+          "predicted_class": 3,
+          "initial_confidence": 0.44355836510658264,
+          "convergence_delta": 0.04303920269012451,
+          "abc": 4.241617692634463,
+          "attributions": [
+            {
+              "token": "\u2581fine",
+              "score": 1.1155378818511963
+            },
+            {
+              "token": "!",
+              "score": 0.9585132598876953
+            },
+            {
+              "token": "\u2581Come",
+              "score": 0.9205964207649231
+            },
+            {
+              "token": ",",
+              "score": 0.6814202070236206
+            },
+            {
+              "token": "\u2581all",
+              "score": 0.6695117354393005
+            },
+            {
+              "token": "\u2581on",
+              "score": 0.6321859955787659
+            },
+            {
+              "token": "\u2581it",
+              "score": 0.35080522298812866
+            },
+            {
+              "token": "s",
+              "score": 0.31056368350982666
+            },
+            {
+              "token": "'",
+              "score": 0.3056274354457855
+            }
+          ]
+        },
+        {
+          "sentence": "Look, my friends \u2014 the border! I can see the sign, we're leaving Brazil!",
+          "predicted_class": 6,
+          "initial_confidence": 0.2906687259674072,
+          "convergence_delta": 2.3704938888549805,
+          "abc": 3.3767732847481966,
+          "attributions": [
+            {
+              "token": "\u2581Brazil",
+              "score": 2.323779582977295
+            },
+            {
+              "token": "\u2581border",
+              "score": 2.319713830947876
+            },
+            {
+              "token": "\u2581Look",
+              "score": 1.7652227878570557
+            },
+            {
+              "token": "\u2581sign",
+              "score": 1.5873889923095703
+            },
+            {
+              "token": "\u2581friends",
+              "score": 1.5469685792922974
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 1.4160484075546265
+            },
+            {
+              "token": "\u2581leaving",
+              "score": 1.4044034481048584
+            },
+            {
+              "token": "!",
+              "score": 1.2435855865478516
+            },
+            {
+              "token": ",",
+              "score": 1.0498673915863037
+            },
+            {
+              "token": "\u2581my",
+              "score": 1.0167829990386963
+            },
+            {
+              "token": "!",
+              "score": 1.0052789449691772
+            },
+            {
+              "token": "re",
+              "score": 0.7402048110961914
+            },
+            {
+              "token": ",",
+              "score": 0.7252561450004578
+            },
+            {
+              "token": "\u2581see",
+              "score": 0.7181293368339539
+            },
+            {
+              "token": "\u2581we",
+              "score": 0.7067333459854126
+            },
+            {
+              "token": "\u2581the",
+              "score": 0.6195239424705505
+            },
+            {
+              "token": "\u2581I",
+              "score": 0.5929716229438782
+            },
+            {
+              "token": "\u2581can",
+              "score": 0.5463179349899292
+            },
+            {
+              "token": "\u2581the",
+              "score": 0.48247915506362915
+            },
+            {
+              "token": "'",
+              "score": 0.4443773627281189
+            }
+          ]
+        }
+      ],
+      "mean_abc": 2.9773262490828833
+    },
+    "sadness": {
+      "sentences": [
+        {
+          "sentence": "We also had to witness death very often.",
+          "predicted_class": 5,
+          "initial_confidence": 0.9346122145652771,
+          "convergence_delta": 0.6230869293212891,
+          "abc": 2.339533733204007,
+          "attributions": [
+            {
+              "token": "\u2581witness",
+              "score": 2.1915929317474365
+            },
+            {
+              "token": "\u2581death",
+              "score": 1.890120029449463
+            },
+            {
+              "token": ".",
+              "score": 1.3521277904510498
+            },
+            {
+              "token": "\u2581often",
+              "score": 0.9318281412124634
+            },
+            {
+              "token": "\u2581We",
+              "score": 0.8296988010406494
+            },
+            {
+              "token": "\u2581had",
+              "score": 0.7425068616867065
+            },
+            {
+              "token": "\u2581very",
+              "score": 0.6000814437866211
+            },
+            {
+              "token": "\u2581to",
+              "score": 0.5605803728103638
+            },
+            {
+              "token": "\u2581also",
+              "score": 0.5286014676094055
+            }
+          ]
+        },
+        {
+          "sentence": "He pulled out an axe \u2014 and unfortunately, that's how these people end up\u2026",
+          "predicted_class": 1,
+          "initial_confidence": 0.4624905288219452,
+          "convergence_delta": 2.5459089279174805,
+          "abc": 7.887511875014752,
+          "attributions": [
+            {
+              "token": "\u2581axe",
+              "score": 5.409409046173096
+            },
+            {
+              "token": "\u2581unfortunately",
+              "score": 4.150355339050293
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 1.493852138519287
+            },
+            {
+              "token": "\u2581people",
+              "score": 1.240693211555481
+            },
+            {
+              "token": "\u2581pulled",
+              "score": 1.189181923866272
+            },
+            {
+              "token": "\u2581these",
+              "score": 1.0681980848312378
+            },
+            {
+              "token": ".",
+              "score": 1.0601168870925903
+            },
+            {
+              "token": "\u2581end",
+              "score": 1.040440320968628
+            },
+            {
+              "token": ".",
+              "score": 0.9354592561721802
+            },
+            {
+              "token": ".",
+              "score": 0.9033988118171692
+            },
+            {
+              "token": "\u2581He",
+              "score": 0.8614286184310913
+            },
+            {
+              "token": "\u2581and",
+              "score": 0.8360543251037598
+            },
+            {
+              "token": "\u2581up",
+              "score": 0.7679952383041382
+            },
+            {
+              "token": ",",
+              "score": 0.7661665081977844
+            },
+            {
+              "token": "\u2581how",
+              "score": 0.6527463793754578
+            },
+            {
+              "token": "\u2581an",
+              "score": 0.6208381652832031
+            },
+            {
+              "token": "\u2581out",
+              "score": 0.5945413112640381
+            },
+            {
+              "token": "'",
+              "score": 0.5476333498954773
+            },
+            {
+              "token": "\u2581that",
+              "score": 0.5306685566902161
+            },
+            {
+              "token": "s",
+              "score": 0.4893884062767029
+            }
+          ]
+        },
+        {
+          "sentence": "Tabatinga is a very bleak city.",
+          "predicted_class": 1,
+          "initial_confidence": 0.8130262494087219,
+          "convergence_delta": 13.84589958190918,
+          "abc": 5.76022690924583,
+          "attributions": [
+            {
+              "token": "\u2581bleak",
+              "score": 9.990255355834961
+            },
+            {
+              "token": "\u2581city",
+              "score": 2.9466915130615234
+            },
+            {
+              "token": "\u2581Tab",
+              "score": 2.434467077255249
+            },
+            {
+              "token": ".",
+              "score": 2.1375508308410645
+            },
+            {
+              "token": "\u2581very",
+              "score": 1.8898260593414307
+            },
+            {
+              "token": "ating",
+              "score": 1.7636579275131226
+            },
+            {
+              "token": "a",
+              "score": 1.1884034872055054
+            },
+            {
+              "token": "\u2581is",
+              "score": 1.1798186302185059
+            },
+            {
+              "token": "\u2581a",
+              "score": 0.8924784660339355
+            }
+          ]
+        }
+      ],
+      "mean_abc": 5.329090839154863
+    },
+    "anger": {
+      "sentences": [
+        {
+          "sentence": "Hide it \u2014 quickly, quickly, hide the camera!",
+          "predicted_class": 3,
+          "initial_confidence": 0.38835325837135315,
+          "convergence_delta": 2.434851884841919,
+          "abc": -3.6408191435039043,
+          "attributions": [
+            {
+              "token": "\u2581Hide",
+              "score": 2.019080877304077
+            },
+            {
+              "token": "\u2581hide",
+              "score": 1.5703134536743164
+            },
+            {
+              "token": "\u2581camera",
+              "score": 1.465996503829956
+            },
+            {
+              "token": "\u2581quickly",
+              "score": 1.3840802907943726
+            },
+            {
+              "token": "\u2581quickly",
+              "score": 1.3269751071929932
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 1.0634897947311401
+            },
+            {
+              "token": "!",
+              "score": 0.9923281073570251
+            },
+            {
+              "token": ",",
+              "score": 0.7730295062065125
+            },
+            {
+              "token": ",",
+              "score": 0.6398481130599976
+            },
+            {
+              "token": "\u2581it",
+              "score": 0.5106744170188904
+            },
+            {
+              "token": "\u2581the",
+              "score": 0.46152445673942566
+            }
+          ]
+        },
+        {
+          "sentence": "If there's aggression or someone tries to open the door \u2014 we get out immediately!",
+          "predicted_class": 0,
+          "initial_confidence": 0.9942442774772644,
+          "convergence_delta": 4.672156810760498,
+          "abc": 5.051483205985278,
+          "attributions": [
+            {
+              "token": "\u2581aggression",
+              "score": 2.8598790168762207
+            },
+            {
+              "token": "\u2581immediately",
+              "score": 1.5303128957748413
+            },
+            {
+              "token": "'",
+              "score": 1.3366602659225464
+            },
+            {
+              "token": "\u2581door",
+              "score": 1.3046189546585083
+            },
+            {
+              "token": "!",
+              "score": 1.218240737915039
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 1.180495023727417
+            },
+            {
+              "token": "\u2581out",
+              "score": 1.0665472745895386
+            },
+            {
+              "token": "\u2581get",
+              "score": 1.0244134664535522
+            },
+            {
+              "token": "\u2581there",
+              "score": 0.9085602760314941
+            },
+            {
+              "token": "\u2581If",
+              "score": 0.7408525943756104
+            },
+            {
+              "token": "\u2581we",
+              "score": 0.669519305229187
+            },
+            {
+              "token": "\u2581someone",
+              "score": 0.6499108076095581
+            },
+            {
+              "token": "s",
+              "score": 0.6299779415130615
+            },
+            {
+              "token": "\u2581tries",
+              "score": 0.5967947244644165
+            },
+            {
+              "token": "\u2581or",
+              "score": 0.5099894404411316
+            },
+            {
+              "token": "\u2581the",
+              "score": 0.5068053603172302
+            },
+            {
+              "token": "\u2581open",
+              "score": 0.4994565546512604
+            },
+            {
+              "token": "\u2581to",
+              "score": 0.3438994586467743
+            }
+          ]
+        },
+        {
+          "sentence": "This keeps happening all the time!",
+          "predicted_class": 0,
+          "initial_confidence": 0.9341238737106323,
+          "convergence_delta": 10.922511100769043,
+          "abc": 0.7024545213207603,
+          "attributions": [
+            {
+              "token": "\u2581happening",
+              "score": 2.641314744949341
+            },
+            {
+              "token": "!",
+              "score": 1.8697144985198975
+            },
+            {
+              "token": "\u2581keeps",
+              "score": 1.8371063470840454
+            },
+            {
+              "token": "\u2581This",
+              "score": 1.2645989656448364
+            },
+            {
+              "token": "\u2581all",
+              "score": 0.8658269047737122
+            },
+            {
+              "token": "\u2581time",
+              "score": 0.8272231817245483
+            },
+            {
+              "token": "\u2581the",
+              "score": 0.6471608281135559
+            }
+          ]
+        }
+      ],
+      "mean_abc": 0.704372861267378
+    },
+    "fear": {
+      "sentences": [
+        {
+          "sentence": "This feels like some kind of extreme situation \u2014 everyone here is really scared.",
+          "predicted_class": 2,
+          "initial_confidence": 0.9737913608551025,
+          "convergence_delta": 1.2109713554382324,
+          "abc": 7.286198582500219,
+          "attributions": [
+            {
+              "token": "\u2581extreme",
+              "score": 2.626246213912964
+            },
+            {
+              "token": ".",
+              "score": 2.224149227142334
+            },
+            {
+              "token": "\u2581\u2014",
+              "score": 2.1918723583221436
+            },
+            {
+              "token": "\u2581scared",
+              "score": 2.051380157470703
+            },
+            {
+              "token": "\u2581feels",
+              "score": 1.6336168050765991
+            },
+            {
+              "token": "\u2581everyone",
+              "score": 1.6197774410247803
+            },
+            {
+              "token": "\u2581situation",
+              "score": 1.5850951671600342
+            },
+            {
+              "token": "\u2581here",
+              "score": 1.3168025016784668
+            },
+            {
+              "token": "\u2581This",
+              "score": 1.1289479732513428
+            },
+            {
+              "token": "\u2581is",
+              "score": 0.8988214135169983
+            },
+            {
+              "token": "\u2581really",
+              "score": 0.6128705143928528
+            },
+            {
+              "token": "\u2581like",
+              "score": 0.6100946664810181
+            },
+            {
+              "token": "\u2581kind",
+              "score": 0.6086632609367371
+            },
+            {
+              "token": "\u2581some",
+              "score": 0.5452204942703247
+            },
+            {
+              "token": "\u2581of",
+              "score": 0.40483760833740234
+            }
+          ]
+        },
+        {
+          "sentence": "What a terrifying place.",
+          "predicted_class": 1,
+          "initial_confidence": 0.553431510925293,
+          "convergence_delta": 1.1411619186401367,
+          "abc": 3.5761859240592457,
+          "attributions": [
+            {
+              "token": "\u2581terrifying",
+              "score": 11.140815734863281
+            },
+            {
+              "token": "\u2581place",
+              "score": 3.0565009117126465
+            },
+            {
+              "token": ".",
+              "score": 1.9377689361572266
+            },
+            {
+              "token": "\u2581What",
+              "score": 1.9369086027145386
+            },
+            {
+              "token": "\u2581a",
+              "score": 1.444182276725769
+            }
+          ]
+        },
+        {
+          "sentence": "Honestly, I've got chills running down my spine.",
+          "predicted_class": 2,
+          "initial_confidence": 0.6558398604393005,
+          "convergence_delta": 0.5658074617385864,
+          "abc": 4.790932718664408,
+          "attributions": [
+            {
+              "token": "\u2581chills",
+              "score": 5.1528849601745605
+            },
+            {
+              "token": "\u2581spine",
+              "score": 2.841637372970581
+            },
+            {
+              "token": "\u2581got",
+              "score": 1.1448432207107544
+            },
+            {
+              "token": "\u2581running",
+              "score": 0.8957521319389343
+            },
+            {
+              "token": "\u2581Honestly",
+              "score": 0.8747935891151428
+            },
+            {
+              "token": "\u2581down",
+              "score": 0.798711359500885
+            },
+            {
+              "token": ".",
+              "score": 0.6981237530708313
+            },
+            {
+              "token": "\u2581my",
+              "score": 0.6850414276123047
+            },
+            {
+              "token": ",",
+              "score": 0.5183964967727661
+            },
+            {
+              "token": "\u2581I",
+              "score": 0.41070935130119324
+            },
+            {
+              "token": "ve",
+              "score": 0.34607425332069397
+            },
+            {
+              "token": "'",
+              "score": 0.26578354835510254
+            }
+          ]
+        }
+      ],
+      "mean_abc": 5.217772408407957
+    },
+    "disgust": {
+      "sentences": [
+        {
+          "sentence": "But you didn't say it was cocaine.",
+          "predicted_class": 4,
+          "initial_confidence": 0.9065475463867188,
+          "convergence_delta": 11.801340103149414,
+          "abc": 3.9242489151656628,
+          "attributions": [
+            {
+              "token": "\u2581cocaine",
+              "score": 1.6787081956863403
+            },
+            {
+              "token": "\u2581But",
+              "score": 0.8744545578956604
+            },
+            {
+              "token": "\u2581say",
+              "score": 0.8143459558486938
+            },
+            {
+              "token": "\u2581you",
+              "score": 0.5735988020896912
+            },
+            {
+              "token": "\u2581didn",
+              "score": 0.5521117448806763
+            },
+            {
+              "token": ".",
+              "score": 0.5482475757598877
+            },
+            {
+              "token": "\u2581it",
+              "score": 0.38151997327804565
+            },
+            {
+              "token": "t",
+              "score": 0.3247545659542084
+            },
+            {
+              "token": "\u2581was",
+              "score": 0.3220263123512268
+            },
+            {
+              "token": "'",
+              "score": 0.26165491342544556
+            }
+          ]
+        },
+        {
+          "sentence": "I don't need you giving me cocaine!",
+          "predicted_class": 0,
+          "initial_confidence": 0.8443692922592163,
+          "convergence_delta": 1.9251818656921387,
+          "abc": -1.1395697891712189,
+          "attributions": [
+            {
+              "token": "\u2581cocaine",
+              "score": 3.209686040878296
+            },
+            {
+              "token": "\u2581need",
+              "score": 1.0572502613067627
+            },
+            {
+              "token": "\u2581you",
+              "score": 0.7797408699989319
+            },
+            {
+              "token": "\u2581giving",
+              "score": 0.7127721309661865
+            },
+            {
+              "token": "!",
+              "score": 0.6502286195755005
+            },
+            {
+              "token": "\u2581don",
+              "score": 0.5160316228866577
+            },
+            {
+              "token": "'",
+              "score": 0.5079055428504944
+            },
+            {
+              "token": "\u2581I",
+              "score": 0.4937267601490021
+            },
+            {
+              "token": "\u2581me",
+              "score": 0.4779248833656311
+            },
+            {
+              "token": "t",
+              "score": 0.47302645444869995
+            }
+          ]
+        },
+        {
+          "sentence": "Ugh, what kind of question is that?",
+          "predicted_class": 0,
+          "initial_confidence": 0.5433153510093689,
+          "convergence_delta": 1.9224464893341064,
+          "abc": 1.1691715950146317,
+          "attributions": [
+            {
+              "token": "\u2581Ugh",
+              "score": 4.49367094039917
+            },
+            {
+              "token": "\u2581question",
+              "score": 1.3547964096069336
+            },
+            {
+              "token": "?",
+              "score": 1.2678041458129883
+            },
+            {
+              "token": "\u2581kind",
+              "score": 0.9977053999900818
+            },
+            {
+              "token": ",",
+              "score": 0.9601924419403076
+            },
+            {
+              "token": "\u2581what",
+              "score": 0.9407342672348022
+            },
+            {
+              "token": "\u2581that",
+              "score": 0.936549723148346
+            },
+            {
+              "token": "\u2581is",
+              "score": 0.840979278087616
+            },
+            {
+              "token": "\u2581of",
+              "score": 0.6256038546562195
+            }
+          ]
+        }
+      ],
+      "mean_abc": 1.3179502403363585
+    },
+    "surprise": {
+      "sentences": [
+        {
+          "sentence": "Oh my God, what a question! Don't joke like that.",
+          "predicted_class": 6,
+          "initial_confidence": 0.7037779688835144,
+          "convergence_delta": 2.2777297496795654,
+          "abc": -2.4884408619254827,
+          "attributions": [
+            {
+              "token": "\u2581joke",
+              "score": 4.467447280883789
+            },
+            {
+              "token": "\u2581Don",
+              "score": 1.839613676071167
+            },
+            {
+              "token": "\u2581question",
+              "score": 1.8181198835372925
+            },
+            {
+              "token": "\u2581like",
+              "score": 1.3727489709854126
+            },
+            {
+              "token": "\u2581my",
+              "score": 1.3046382665634155
+            },
+            {
+              "token": "!",
+              "score": 1.222396969795227
+            },
+            {
+              "token": "\u2581God",
+              "score": 1.1125658750534058
+            },
+            {
+              "token": "t",
+              "score": 1.100499153137207
+            },
+            {
+              "token": ".",
+              "score": 1.0213463306427002
+            },
+            {
+              "token": "\u2581that",
+              "score": 0.9094037413597107
+            },
+            {
+              "token": "\u2581what",
+              "score": 0.8787385821342468
+            },
+            {
+              "token": "\u2581Oh",
+              "score": 0.857171893119812
+            },
+            {
+              "token": ",",
+              "score": 0.8423850536346436
+            },
+            {
+              "token": "\u2581a",
+              "score": 0.7343409657478333
+            },
+            {
+              "token": "'",
+              "score": 0.7039450407028198
+            }
+          ]
+        },
+        {
+          "sentence": "Why did you say it was flour?",
+          "predicted_class": 6,
+          "initial_confidence": 0.7669355869293213,
+          "convergence_delta": 1.2472357749938965,
+          "abc": 0.3348763920366764,
+          "attributions": [
+            {
+              "token": "\u2581Why",
+              "score": 1.512411117553711
+            },
+            {
+              "token": "\u2581say",
+              "score": 1.299170970916748
+            },
+            {
+              "token": "\u2581did",
+              "score": 1.1856701374053955
+            },
+            {
+              "token": "\u2581flour",
+              "score": 0.8552109003067017
+            },
+            {
+              "token": "\u2581you",
+              "score": 0.8027757406234741
+            },
+            {
+              "token": "?",
+              "score": 0.7567560076713562
+            },
+            {
+              "token": "\u2581it",
+              "score": 0.5520501732826233
+            },
+            {
+              "token": "\u2581was",
+              "score": 0.5514298677444458
+            }
+          ]
+        },
+        {
+          "sentence": "We suddenly sped up like crazy!",
+          "predicted_class": 6,
+          "initial_confidence": 0.7144718766212463,
+          "convergence_delta": 0.8308150768280029,
+          "abc": -0.30712109711021185,
+          "attributions": [
+            {
+              "token": "\u2581sped",
+              "score": 4.646061420440674
+            },
+            {
+              "token": "\u2581suddenly",
+              "score": 4.173847198486328
+            },
+            {
+              "token": "\u2581crazy",
+              "score": 2.062249183654785
+            },
+            {
+              "token": "\u2581up",
+              "score": 1.6800403594970703
+            },
+            {
+              "token": "\u2581We",
+              "score": 1.4709738492965698
+            },
+            {
+              "token": "!",
+              "score": 1.2198973894119263
+            },
+            {
+              "token": "\u2581like",
+              "score": 0.9482481479644775
+            }
+          ]
+        }
+      ],
+      "mean_abc": -0.820228522333006
+    }
+  }
+}

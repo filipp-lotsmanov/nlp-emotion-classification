@@ -49,44 +49,60 @@ _ACTIVATIONS = {
 }
 
 
-def get_attributions_for_perturbation(sentence, model, tokenizer, activation, n_steps):
+def get_attributions_for_perturbation(sentence, model, tokenizer, n_steps):
     model.eval()
 
+    # Follow the model rather than a flag: main() may have put it on cuda, and
+    # captum reads the embeddings straight off it.
+    device = next(model.parameters()).device
     inputs = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    input_ids = inputs["input_ids"]
-    attention_mask = inputs["attention_mask"]
+    input_ids = inputs["input_ids"].to(device)
+    attention_mask = inputs["attention_mask"].to(device)
 
-    embeddings = model.deberta.embeddings(input_ids)
+    # word_embeddings, not embeddings. The latter is the whole block - word
+    # vectors plus position vectors plus LayerNorm - and feeding its output
+    # back in as inputs_embeds makes DebertaV2Model run that block a second
+    # time. Attributions then describe a model that adds positions twice while
+    # the perturbation confidences come from the normal forward pass, so the
+    # two halves disagree and ABC goes negative.
+    embeddings = model.deberta.embeddings.word_embeddings(input_ids)
     baseline_embeddings = torch.zeros_like(embeddings)
 
-    def forward_func(embeddings_input):
+    # Integrate the raw logit, not the probability. Above roughly 0.97
+    # confidence the softmax gradient is flat along the whole path, so IG over
+    # `activation(logits)` integrates numerical noise: attribution magnitudes
+    # collapse by an order of magnitude and the ranking stops being stable
+    # between step counts. The logit keeps a usable gradient. Confidences are
+    # still read through `activation` in perturbation_analysis, so the curves
+    # stay in probability space where they mean something.
+    def logit_func(embeddings_input):
         outputs = model.deberta(inputs_embeds=embeddings_input, attention_mask=attention_mask)
-        hidden_state = outputs.last_hidden_state
-        pooled = model.pooler(hidden_state)
-        pooled = model.dropout(pooled)
-        logits = model.classifier(pooled)
-        return activation(logits)
+        pooled = model.dropout(model.pooler(outputs.last_hidden_state))
+        return model.classifier(pooled)
 
     with torch.no_grad():
-        probs = forward_func(embeddings)
-    target_idx = torch.argmax(probs[0]).item()
+        target_idx = int(torch.argmax(logit_func(embeddings)[0]).item())
 
-    ig = IntegratedGradients(forward_func)
-    attributions = ig.attribute(
-        inputs=embeddings, baselines=baseline_embeddings, target=target_idx, n_steps=n_steps
+    ig = IntegratedGradients(logit_func)
+    attributions, delta = ig.attribute(
+        inputs=embeddings,
+        baselines=baseline_embeddings,
+        target=target_idx,
+        n_steps=n_steps,
+        return_convergence_delta=True,
     )
 
     attr_scores = attributions.norm(dim=-1).squeeze(0).detach().cpu().numpy()
     tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
 
-    return attr_scores, tokens, target_idx, input_ids, attention_mask
+    return attr_scores, tokens, target_idx, input_ids, attention_mask, float(delta.abs().max())
 
 
 def perturbation_analysis(sentence, model, tokenizer, activation, n_steps):
     print(f"\nAnalyzing: '{sentence}'")
 
-    attr_scores, tokens, target_emotion, input_ids, attention_mask = (
-        get_attributions_for_perturbation(sentence, model, tokenizer, activation, n_steps)
+    attr_scores, tokens, target_emotion, input_ids, attention_mask, delta = (
+        get_attributions_for_perturbation(sentence, model, tokenizer, n_steps)
     )
 
     model.eval()
@@ -140,6 +156,7 @@ def perturbation_analysis(sentence, model, tokenizer, activation, n_steps):
         "conf_least_first": confidences_least_first,
         "conf_most_first": confidences_most_first,
         "attr_scores": attr_scores,
+        "convergence_delta": delta,
     }
 
 
@@ -193,6 +210,7 @@ def plot_perturbation_curves(results, out_dir):
     abc_score = float(np.sum(np.array(conf_least) - np.array(conf_most)))
 
     print(f"Initial confidence: {results['initial_confidence']:.4f}")
+    print(f"IG convergence delta: {results['convergence_delta']:.4f}")
     print(f"Final conf least→most: {conf_least[-1]:.4f}")
     print(f"Final conf most→least: {conf_most[-1]:.4f}")
     print(f"Area Between Curves (ABC): {abc_score:.4f}")
@@ -228,7 +246,7 @@ def analyze_token_importance(results):
     sorted_pairs = sorted(zip(clean_tokens, clean_attrs), key=lambda x: abs(x[1]), reverse=True)
     for i, (tok, score) in enumerate(sorted_pairs[:5], 1):
         print(f"  {i}. '{tok}': {score:.4f}")
-    if len(sorted_pairs) > 3:
+    if len(sorted_pairs) > 8:
         for i, (tok, score) in enumerate(sorted_pairs[-3:], 1):
             print(f"  {i}. '{tok}': {score:.4f}")
 
@@ -288,6 +306,26 @@ def main() -> int:
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, local_files_only=True)
     model.eval()
 
+    # The attribution path rebuilds the forward pass by hand, so it can drift
+    # from what the model actually computes and still produce plausible-looking
+    # numbers. Check the two agree before spending the run on them.
+    probe = tokenizer("What a terrifying place.", return_tensors="pt").to(args.device)
+    with torch.no_grad():
+        real = activation(model(**probe).logits)
+        rebuilt_hidden = model.deberta(
+            inputs_embeds=model.deberta.embeddings.word_embeddings(probe["input_ids"]),
+            attention_mask=probe["attention_mask"],
+        ).last_hidden_state
+        rebuilt = activation(model.classifier(model.dropout(model.pooler(rebuilt_hidden))))
+    drift = float((real - rebuilt).abs().max())
+    if real.argmax() != rebuilt.argmax() or drift > 0.05:
+        parser.error(
+            "the attribution forward pass disagrees with the model "
+            f"(argmax {int(real.argmax())} vs {int(rebuilt.argmax())}, max delta {drift:.4f}). "
+            "Attributions would describe a different model than the confidences."
+        )
+    print(f"forward-pass check ok (max delta {drift:.4f})")
+
     report: dict[str, object] = {
         "checkpoint": str(args.checkpoint),
         "activation": args.activation,
@@ -312,7 +350,18 @@ def main() -> int:
                     "sentence": sentence,
                     "predicted_class": int(results["target_emotion"]),
                     "initial_confidence": float(results["initial_confidence"]),
+                    "convergence_delta": float(results["convergence_delta"]),
                     "abc": abc,
+                    # The report's qualitative claims rest on these, so they
+                    # belong in the committed artifact rather than in stdout.
+                    "attributions": [
+                        {"token": results["tokens"][i], "score": float(results["attr_scores"][i])}
+                        for i in sorted(
+                            results["maskable_indices"],
+                            key=lambda i: abs(results["attr_scores"][i]),
+                            reverse=True,
+                        )
+                    ],
                 }
             )
 

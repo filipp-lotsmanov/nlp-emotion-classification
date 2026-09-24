@@ -506,7 +506,12 @@ class TestTrainingWillNotClobberAProvenCheckpoint:
         (models / "emotion-en-deberta" / "config.json").write_text("{}", encoding="utf-8")
         env = {**os.environ, "VEA_MODELS_DIR": str(models), "VEA_DATA_DIR": str(tmp_path)}
 
-        for args in (["--force"], ["--output", str(models / "emotion-en-deberta-balanced")]):
+        # --min-free above any real card makes pick_free_gpu.sh fail, which is
+        # the first hard stop after the guard. Without it this test clears the
+        # guard, picks a free GPU, syncs, and starts a 3-4 hour training run -
+        # and the --force case targets the production checkpoint.
+        stop = ["--min-free", "99999999"]
+        for args in (["--force", *stop], ["--output", str(models / "emotion-en-deberta-balanced"), *stop]):
             result = subprocess.run(
                 [usable_bash(), str(self.SCRIPT), *args],
                 capture_output=True,

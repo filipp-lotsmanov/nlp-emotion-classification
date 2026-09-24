@@ -60,12 +60,10 @@ retrained here on 2026-09-16: macro F1 0.8162 against the card's 0.8127,
 accuracy 0.9202 against 0.8995. Details and the full audit:
 [docs/PROVENANCE.md](docs/PROVENANCE.md).
 
-The two reports in `docs/evaluation/` still describe the pre-rebuild
-checkpoint and are banner-marked as such. `error_analysis.md` regenerates in
-full from `training/emotion_en_deberta/error_analysis.py`;
-`interpretability_xai.md` needs
-`training/interpretability/attention_analysis.py` rerun against a fetched
-checkpoint.
+`docs/evaluation/error_analysis.md` is regenerated against both released
+checkpoints and agrees with the figures above. `interpretability_xai.md` is regenerated
+against the same checkpoint; its integrated-gradients runs do not satisfy
+completeness, which that document states and explains.
 
 ## Install
 

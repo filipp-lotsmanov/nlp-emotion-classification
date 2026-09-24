@@ -56,6 +56,12 @@ done
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
+# An explicitly exported VEA_MODELS_DIR wins over the machine default. The
+# env file is a convenience for an interactive shell, not an override: a
+# caller that set the variable deliberately - a test with a tmp dir, or a run
+# against a scratch copy - must not silently get /workspace/vea-models back.
+_vea_models_preset="${VEA_MODELS_DIR:-}"
+_vea_data_preset="${VEA_DATA_DIR:-}"
 for candidate in /workspace/vea-env.sh "${REPO_ROOT}/../vea-env.sh"; do
     if [[ -f "$candidate" ]]; then
         # shellcheck disable=SC1090
@@ -64,6 +70,9 @@ for candidate in /workspace/vea-env.sh "${REPO_ROOT}/../vea-env.sh"; do
         break
     fi
 done
+[[ -n "$_vea_models_preset" ]] && export VEA_MODELS_DIR="$_vea_models_preset"
+[[ -n "$_vea_data_preset" ]] && export VEA_DATA_DIR="$_vea_data_preset"
+unset _vea_models_preset _vea_data_preset
 
 if ! command -v uv >/dev/null 2>&1; then
     echo "error: uv not found. Run ./scripts/setup_server.sh first." >&2
