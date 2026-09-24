@@ -511,7 +511,10 @@ class TestTrainingWillNotClobberAProvenCheckpoint:
         # guard, picks a free GPU, syncs, and starts a 3-4 hour training run -
         # and the --force case targets the production checkpoint.
         stop = ["--min-free", "99999999"]
-        for args in (["--force", *stop], ["--output", str(models / "emotion-en-deberta-balanced"), *stop]):
+        for args in (
+            ["--force", *stop],
+            ["--output", str(models / "emotion-en-deberta-balanced"), *stop],
+        ):
             result = subprocess.run(
                 [usable_bash(), str(self.SCRIPT), *args],
                 capture_output=True,
