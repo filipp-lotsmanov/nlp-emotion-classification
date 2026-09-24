@@ -241,6 +241,10 @@ echo "To serve:"
 echo "  tmux new -s api  ->  uv run vea serve          (http://127.0.0.1:8000)"
 if command -v npm >/dev/null 2>&1; then
     echo "  tmux new -s web  ->  cd frontend && npm install && npm run dev"
+    echo
+    echo "From your own machine, tunnel both ports and open http://localhost:3000"
+    echo "(not 127.0.0.1 - the dev server rejects it and the submit button stays disabled):"
+    echo "  ssh -L 3000:localhost:3000 -L 8000:localhost:8000 <user>@<server>"
 else
     echo "  frontend unavailable: Node was not installed, see the warning above"
 fi

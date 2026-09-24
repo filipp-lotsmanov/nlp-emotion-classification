@@ -259,8 +259,23 @@ uv run vea serve            # API on http://127.0.0.1:8000
 ```bash
 cd frontend
 npm install
-npm run dev                 # UI on http://127.0.0.1:3000
+npm run dev                 # UI on http://localhost:3000
 ```
+
+Open the UI as `localhost`, not `127.0.0.1`. The Next.js dev server only trusts
+`localhost` by default and refuses its dev WebSocket to any other host name, a
+bare IP included. The page still renders, but React never hydrates it, so the
+**Run pipeline** button stays disabled whatever you type.
+
+On a remote machine, forward both ports over SSH and use the same address from
+your own browser:
+
+```bash
+ssh -L 3000:localhost:3000 -L 8000:localhost:8000 <user>@<server>
+```
+
+Port 8000 is needed as well: the page calls the API from your browser, at
+`http://127.0.0.1:8000`, which the tunnel carries to the server.
 
 Or skip the web interface entirely:
 
@@ -272,7 +287,7 @@ uv run vea run "https://www.youtube.com/watch?v=VIDEO_ID"
 
 ## First run
 
-Open <http://127.0.0.1:3000>, paste a Russian-language YouTube URL, press
+Open <http://localhost:3000>, paste a Russian-language YouTube URL, press
 **Run pipeline**, and watch the stage strip.
 
 **Start with a three-to-five minute video.** You are proving that nine stages

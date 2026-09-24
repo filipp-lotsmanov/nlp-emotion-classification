@@ -167,8 +167,12 @@ table. Same pipeline, same vocabulary, same colours as the PNG.
 
 ```bash
 uv run vea serve                     # API on http://127.0.0.1:8000
-cd frontend && npm install && npm run dev   # UI on http://127.0.0.1:3000
+cd frontend && npm install && npm run dev   # UI on http://localhost:3000
 ```
+
+Open it as `localhost`: the dev server refuses other host names, `127.0.0.1`
+included, and the page then never becomes interactive. On a remote server,
+tunnel ports 3000 and 8000 over SSH. See [SETUP.md](SETUP.md#running-it-natively-on-any-of-the-three).
 
 Or in containers, which is the easier path and the one that runs on a machine
 with no GPU:
