@@ -92,18 +92,37 @@ fi
 LD_LINE="export LD_LIBRARY_PATH=\"${CUBLAS_DIR}:${CUDNN_DIR}:\${LD_LIBRARY_PATH:-}\""
 
 if (( WRITE_ENV )) && [[ -n "${ENV_FILE:-}" ]]; then
-    if grep -qF "$CUBLAS_DIR" "$ENV_FILE"; then
+    # NOT $ENV_FILE itself: setup_server.sh regenerates that file from a
+    # heredoc on every run, so anything appended to it survives until the next
+    # bootstrap and then disappears. That is not hypothetical - it is how a
+    # working box started failing stage 4 with "libcublas.so.12 is not found"
+    # immediately after a routine re-run of setup_server.sh.
+    LOCAL_ENV="$(dirname "$ENV_FILE")/vea-env.local.sh"
+
+    if [[ -f "$LOCAL_ENV" ]] && grep -qF "$CUBLAS_DIR" "$LOCAL_ENV"; then
         echo
-        echo "$ENV_FILE already sets LD_LIBRARY_PATH for these"
+        echo "$LOCAL_ENV already sets LD_LIBRARY_PATH for these"
     else
         {
-            echo
             echo "# CUDA 12 runtime for CTranslate2 (stage 4). See"
             echo "# scripts/setup_ctranslate2_cuda.sh for why this is separate from torch's CUDA 13."
             echo "$LD_LINE"
-        } >> "$ENV_FILE"
+        } >> "$LOCAL_ENV"
         echo
-        echo "appended LD_LIBRARY_PATH to $ENV_FILE"
+        echo "appended LD_LIBRARY_PATH to $LOCAL_ENV"
+    fi
+
+    # An older $ENV_FILE, generated before setup_server.sh learned to source
+    # the .local file, would leave the line above unread. Add the hook rather
+    # than requiring a bootstrap re-run to pick it up.
+    if ! grep -qF "vea-env.local.sh" "$ENV_FILE"; then
+        {
+            echo
+            echo "if [ -f \"${LOCAL_ENV}\" ]; then"
+            echo "    . \"${LOCAL_ENV}\""
+            echo "fi"
+        } >> "$ENV_FILE"  # env-append-ok: the hook only, which a regenerated file already has
+        echo "added the vea-env.local.sh hook to $ENV_FILE"
     fi
 fi
 

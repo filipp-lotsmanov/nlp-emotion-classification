@@ -77,6 +77,20 @@ export VEA_DATA_DIR="${PERSIST_DIR}/vea-data"
 export VEA_MODELS_DIR="${PERSIST_DIR}/vea-models"
 export VEA_DEVICE=auto
 export PATH="${PERSIST_DIR}/node/bin:\$PATH"
+
+# This file is REGENERATED from scratch every time setup_server.sh runs, so
+# nothing else may append to it - an addition would survive exactly until the
+# next bootstrap and then vanish, which is how stage 4 lost its CUDA 12
+# LD_LIBRARY_PATH and started failing with "libcublas.so.12 is not found" on a
+# box that had been working. Other setup scripts write to the .local file
+# below instead, and it is never touched from here.
+#
+# An `if` rather than `[ -f x ] && . x`: a sourced file whose last command
+# returns non-zero makes `source` return non-zero, which aborts any caller
+# running under `set -e` - including this script.
+if [ -f "${PERSIST_DIR}/vea-env.local.sh" ]; then
+    . "${PERSIST_DIR}/vea-env.local.sh"
+fi
 EOF
 echo "wrote $ENV_FILE"
 # shellcheck disable=SC1090

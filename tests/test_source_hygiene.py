@@ -634,3 +634,68 @@ class TestScriptHelpStaysInsideItsHeader:
             f"{script} --help prints code, so its `sed -n '2,Np'` range runs past "
             f"the header comment: {spilled}"
         )
+
+
+class TestNothingAppendsToTheRegeneratedEnvFile:
+    """`vea-env.sh` is regenerated, so appending to it is a silent time bomb.
+
+    `setup_server.sh` writes that file from a heredoc with `cat >`, truncating
+    it, and it is the script you re-run after every container restart. Anything
+    another script appends therefore survives until the next bootstrap and then
+    disappears.
+
+    That is not a hypothetical. `setup_ctranslate2_cuda.sh` appended stage 4's
+    CUDA 12 `LD_LIBRARY_PATH` there, a routine re-run of `setup_server.sh`
+    deleted it, and the next run died with `libcublas.so.12 is not found` on a
+    box that had been transcribing fine an hour earlier - with nothing in the
+    diff to explain it.
+
+    Additions belong in `vea-env.local.sh`, which the generated file sources
+    and never overwrites.
+    """
+
+    GENERATED = "vea-env.sh"
+    LOCAL = "vea-env.local.sh"
+
+    @staticmethod
+    def _scripts() -> list[Path]:
+        return sorted((REPO / "scripts").glob("*.sh"))
+
+    def test_the_bootstrap_sources_the_local_file(self):
+        text = (REPO / "scripts" / "setup_server.sh").read_text(encoding="utf-8")
+        assert self.LOCAL in text, (
+            f"setup_server.sh must source {self.LOCAL}, or additions to the environment "
+            "have nowhere to live that survives a re-run"
+        )
+
+    def test_no_script_appends_to_the_generated_file(self):
+        # `>> "$ENV_FILE"` and `>> /workspace/vea-env.sh` alike. The .local file
+        # is the supported target and is excluded by matching on the exact name.
+        appends = re.compile(r">>\s*\"?\$\{?ENV_FILE\}?\"?|>>\s*\"?\S*/?vea-env\.sh\"?")
+        offenders = []
+        for script in self._scripts():
+            for number, line in enumerate(script.read_text(encoding="utf-8").splitlines(), 1):
+                if self.LOCAL in line:
+                    continue
+                # One append is legitimate: writing the hook that sources the
+                # .local file into an env file generated before that hook
+                # existed. It is idempotent and a regenerated file already has
+                # it, so losing it costs nothing. Marked explicitly rather than
+                # inferred from nearby lines, so the exemption is greppable and
+                # has to be argued for in review.
+                if "env-append-ok" in line:
+                    continue
+                if appends.search(line):
+                    offenders.append(f"{script.name}:{number}: {line.strip()}")
+        assert not offenders, (
+            f"these append to the regenerated {self.GENERATED}, so setup_server.sh will "
+            f"delete their work on its next run - write to {self.LOCAL} instead:\n"
+            + "\n".join(offenders)
+        )
+
+    def test_the_cuda_script_targets_the_local_file(self):
+        text = (REPO / "scripts" / "setup_ctranslate2_cuda.sh").read_text(encoding="utf-8")
+        assert self.LOCAL in text, (
+            "setup_ctranslate2_cuda.sh must write LD_LIBRARY_PATH to "
+            f"{self.LOCAL}; stage 4 stops working otherwise"
+        )
