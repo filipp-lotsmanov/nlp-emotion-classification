@@ -6,9 +6,13 @@ is the point of the preflight check, and it is what CI exercises.
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 import pytest
 
-from vea.cli import main
+from vea.cli import _force_utf8_output, main
 
 
 @pytest.fixture
@@ -135,3 +139,64 @@ class TestUrlValidation:
 def test_unknown_command_is_rejected():
     with pytest.raises(SystemExit):
         main(["frobnicate"])
+
+
+class TestConsoleEncoding:
+    """A cp1252 console must not be able to kill a run.
+
+    The pipeline banner prints `1 -> 2 -> ...` with U+2192, and from stage 4
+    onward it prints Russian transcript text. Neither is encodable in cp1252,
+    which is what `sys.stdout` is on a Western-European Windows install, so the
+    first one reached ended the run with UnicodeEncodeError after the download
+    and transcription had already been paid for.
+
+    Reproduced here with PYTHONIOENCODING rather than a real Windows console,
+    so it runs on all three platforms: the bug is the stream's encoding, not
+    the operating system.
+    """
+
+    ARROW = "→"
+    CYRILLIC = "Привет"  # "Privet"
+
+    @staticmethod
+    def _run(code: str, encoding: str) -> subprocess.CompletedProcess:
+        # sys.executable, not "python": on Windows a bare `python` can resolve
+        # to the launcher stub rather than to this environment's interpreter.
+        return subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            env={**os.environ, "PYTHONIOENCODING": encoding},
+            check=False,
+        )
+
+    def test_the_stage_arrow_survives_a_cp1252_stream(self):
+        code = (
+            "from vea.cli import _force_utf8_output\n"
+            "_force_utf8_output()\n"
+            f"print('1 {self.ARROW} 2')\n"
+        )
+        result = self._run(code, "cp1252")
+        assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+        assert self.ARROW.encode("utf-8") in result.stdout
+
+    def test_russian_transcript_text_survives_a_cp1252_stream(self):
+        code = (
+            "from vea.cli import _force_utf8_output\n"
+            "_force_utf8_output()\n"
+            f"print('{self.CYRILLIC}')\n"
+        )
+        result = self._run(code, "cp1252")
+        assert result.returncode == 0, result.stderr.decode("utf-8", "replace")
+        assert self.CYRILLIC.encode("utf-8") in result.stdout
+
+    def test_without_the_fix_the_same_print_fails(self):
+        """The guard above is only meaningful if the bug is real."""
+        result = self._run(f"print('1 {self.ARROW} 2')", "cp1252")
+        assert result.returncode != 0
+        assert b"UnicodeEncodeError" in result.stderr
+
+    def test_a_stream_without_reconfigure_is_tolerated(self, monkeypatch):
+        """pytest's capture replaces the streams with objects that lack it."""
+        monkeypatch.setattr(sys, "stdout", object())
+        monkeypatch.setattr(sys, "stderr", object())
+        _force_utf8_output()

@@ -303,9 +303,17 @@ class JobStore:
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    text=True,
+                    # Both ends of this pipe carry Russian transcript text, and
+                    # both default to the locale encoding - cp1252 on a
+                    # Western-European Windows install. PYTHONUTF8 fixes the
+                    # child's end for anything that prints before vea.cli's own
+                    # _force_utf8_output runs; `encoding` fixes ours, which
+                    # would otherwise decode the child's UTF-8 as cp1252 and
+                    # hand the log file mojibake or raise outright.
+                    encoding="utf-8",
+                    errors="replace",
                     bufsize=1,
-                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                    env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONUTF8": "1"},
                     **spawn_kwargs,
                 )
             except OSError as exc:

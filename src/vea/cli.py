@@ -218,7 +218,33 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _force_utf8_output() -> None:
+    """Make stdout and stderr UTF-8 whatever the console's codepage is.
+
+    The pipeline prints a stage arrow and, from stage 4 onward, Russian
+    transcript text. On a Western-European Windows install ``sys.stdout`` is
+    cp1252, which can encode neither, so the first one reached raises
+    ``UnicodeEncodeError`` and kills a run that was otherwise healthy:
+
+        UnicodeEncodeError: 'charmap' codec can't encode character '\\u2192'
+
+    Printing is not supposed to be a failure mode, so the streams are
+    reconfigured rather than the messages sanitised - there are hundreds of the
+    latter and they include arbitrary transcript text.
+
+    ``errors="replace"`` rather than the default: a console that genuinely
+    cannot render Cyrillic should show question marks, not abort stage 4.
+    ``reconfigure`` is looked up rather than called directly because pytest's
+    capture replaces the streams with objects that do not have it.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _force_utf8_output()
     args = build_parser().parse_args(argv)
     return args.func(args)
 
