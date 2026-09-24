@@ -1,9 +1,13 @@
 # Retraining and reproduction
 
-Two checkpoints the pipeline needs do not exist and no code in the archive
-produced them. This directory is where they get rebuilt. Read this page before
-writing any training code — the order of work matters, and one of the two has a
-much weaker specification than the other.
+Two checkpoints the pipeline needs were absent from the archive, and no code in
+it produced them. This directory is where they get rebuilt from source. The
+pipeline itself is no longer blocked — both checkpoints are fetchable as
+release assets, see the main [README](../README.md) — but only
+`emotion-en-deberta` is reproducible here today; `va-xlmroberta-large` is
+mirrored from upstream rather than rebuilt. Read this page before writing any
+training code: the order of work matters, and one of the two has a much weaker
+specification than the other.
 
 ```bash
 uv sync --extra train

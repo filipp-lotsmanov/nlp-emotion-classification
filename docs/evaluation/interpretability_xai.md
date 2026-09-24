@@ -1,11 +1,22 @@
 # **Explainable AI Analysis of Emotion Classification Model**
 
+> **Stale — describes a checkpoint that is not in this repository.** The figures
+> and attributions below were produced before the 2026-09-16 rebuild, from a
+> checkpoint reached by an absolute path on one machine. They also apply a
+> **sigmoid** activation on the premise that the head is multi-label; it is not
+> (`training/emotion_en_deberta/train.py` sets
+> `problem_type="single_label_classification"` and trains with
+> `CrossEntropyLoss`, and `src/vea/stages/emotion_en.py` serves with softmax and
+> argmax). Regenerate with
+> `training/interpretability/attention_analysis.py` against a fetched checkpoint
+> before quoting anything here. See [PROVENANCE](../PROVENANCE.md).
+
 ---
 
 ## **Introduction**
 
-This report presents an explainability analysis of a **DeBERTa-V2-based emotion classification model** trained to recognize seven categories — **joy, sadness, anger, fear, disgust, surprise,** and **neutral**.  
-The model was fine-tuned for **multi-label classification**, allowing several emotions to be detected within the same sentence.
+This report presents an explainability analysis of a **DeBERTa emotion classification model** (`microsoft/deberta-v3-base`, loaded through the `DebertaV2` classes in `transformers`) trained to recognize seven categories — **joy, sadness, anger, fear, disgust, surprise,** and **neutral**.  
+The analysis below assumes multi-label classification. That assumption is wrong: the head is single-label over the seven categories, so the sigmoid confidences reported here are not the softmax confidences the pipeline records.
 
 Three complementary XAI techniques were applied to **18 translated sentences** (three per emotion) from Russian TV transcripts:
 
@@ -19,7 +30,7 @@ Three complementary XAI techniques were applied to **18 translated sentences** (
 
 ### **Methodology**
 Gradient × Input multiplies the gradient of the model’s output (for a target emotion) by each token’s embedding to estimate its contribution.  
-The implementation adapts BERT code for **DeBERTa-V2**, using `model.deberta.embeddings` and the classifier’s **pooler** layer.  
+The implementation adapts BERT code for the **`DebertaV2` class API**, using `model.deberta.embeddings` and the classifier’s **pooler** layer.  
 Attribution values were visualized as bar charts per sentence.
 
 ### **Findings**
@@ -192,7 +203,7 @@ Negative ABC → contextual representations or `[MASK]` artifacts.
 
 ## **Conclusion**
 
-This analysis demonstrates how the **DeBERTa-V2 emotion classifier** processes emotional language:
+This analysis demonstrates how the **DeBERTa emotion classifier** processes emotional language:
 
 - It reliably highlights **emotionally relevant words** and expressive punctuation.  
 - **Gradient×Input, Integrated Gradients, and CP-LRP** yield consistent explanations.  

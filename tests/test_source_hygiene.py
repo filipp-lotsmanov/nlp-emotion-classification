@@ -238,23 +238,33 @@ def test_text_file_io_declares_an_encoding(path: Path):
 
 @lru_cache(maxsize=1)
 def usable_bash() -> str | None:
-    """A bash that actually runs a command, or None.
+    """A bash that can open the paths these tests hand it, or None.
 
     Not `shutil.which("bash")`. On a Windows runner that finds
     C:\\Windows\\System32\\bash.exe - the WSL launcher - which, with no
     distribution installed, prints a UTF-16 notice and exits 1. A test that
     skipped on "bash is absent" therefore ran there and failed on output it
-    never asked for. Probing behaviour catches that, and any other broken
-    bash, without naming a platform.
+    never asked for.
+
+    Running a command is not enough either. With a distribution installed that
+    same launcher runs `exit 7` happily, then cannot resolve the native path
+    these tests pass as argv - it wants /mnt/c/... - and the script exits 127
+    without running. So the probe opens a file by the path form the callers
+    use. Probing behaviour catches both, and any other broken bash, without
+    naming a platform.
     """
     path = shutil.which("bash")
     if path is None:
         return None
     try:
-        probe = subprocess.run([path, "-c", "exit 7"], capture_output=True, timeout=30)
+        probe = subprocess.run(
+            [path, "-c", 'test -f "$1"', "_", str(REPO / "pyproject.toml")],
+            capture_output=True,
+            timeout=30,
+        )
     except OSError:
         return None
-    return path if probe.returncode == 7 else None
+    return path if probe.returncode == 0 else None
 
 
 class TestPipelineWiring:

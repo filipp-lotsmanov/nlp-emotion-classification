@@ -437,7 +437,7 @@ To assess robustness, the model was tested on **5,000 synthetically generated sa
 |--------|-----------|
 | **Preprocessing** | Input text must be normalized (no timestamps, no markup) |
 | **Input Length** | ≤ 512 tokens per instance |
-| **Output** | Multi-label probabilities for 7 emotions |
+| **Output** | Single-label prediction over 7 emotions, with a confidence (see the caveat on confidences above) |
 | **Deployment** | Integrate as the final step in the Content Intelligence Agency pipeline |
 | **Operational Risks** | Bias toward English phrasing; misclassification of sarcasm or irony |
 | **Future Improvements** | Fine-tune with balanced multilingual corpora; add attention regularization; scale XAI dataset |

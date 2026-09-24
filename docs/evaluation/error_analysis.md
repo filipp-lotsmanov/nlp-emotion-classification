@@ -1,5 +1,12 @@
 # Task 9 — End-to-end Error Analysis Report for Emotion Classification
 
+> **Stale — describes the pre-rebuild checkpoint.** The 64,250 samples at 89.95%
+> accuracy below come from the original checkpoint, which is not in this
+> repository. The retrained checkpoint scores 0.9202 accuracy / 0.8162 macro F1
+> (see [PROVENANCE](../PROVENANCE.md) section 10). Regenerate this file with
+> `training/emotion_en_deberta/error_analysis.py`, which rewrites it in full,
+> before quoting any figure here.
+
 This report summarizes the error analysis conducted on the emotion classification system. It consolidates quantitative findings (accuracy, error rates, confusion patterns), linguistic correlates of model mistakes (length, punctuation and casing features, vocabulary effects), and model confidence behavior. The analysis is grounded in 64,250 labeled samples with an overall accuracy of 89.95% (error rate: 10.05%), as computed from `error_analysis_report.json`. Throughout the report, we reference and interpret the accompanying figures by their titles; open them at full size to ensure the axes remain readable.
 
 - Total samples: 64,250

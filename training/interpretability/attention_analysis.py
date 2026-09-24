@@ -1,17 +1,55 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from captum.attr import IntegratedGradients
+"""Integrated-gradients attributions and perturbation curves for the English
+emotion classifier.
 
-model_path = r"C:\Users\Filip Letmanov\Block A\personal_repository\Task10"
+    uv run python training/interpretability/attention_analysis.py \\
+        "$VEA_MODELS_DIR/emotion-en-deberta" \\
+        --out-dir docs/evaluation/figures/xai \\
+        --out-json docs/evaluation/xai_report.json
 
-model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-model.eval()
+Why this exists in this form: the original took its checkpoint from a hardcoded
+absolute path on one Windows machine and called plt.show(), so nobody could
+rerun it and the figures in docs/evaluation/interpretability_xai.md could not be
+traced to a checkpoint. Every figure this writes names the checkpoint it came
+from in the JSON beside it.
+
+The activation applied to the logits is a flag, not a constant. See --activation.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+from captum.attr import IntegratedGradients  # noqa: E402
+from transformers import AutoModelForSequenceClassification, AutoTokenizer  # noqa: E402
+
+#: Applied to the classifier logits before attribution and before every
+#: confidence read.
+#:
+#: The original used sigmoid, on the premise that the head is multi-label. It
+#: is not: train.py sets problem_type="single_label_classification" and trains
+#: with CrossEntropyLoss, and src/vea/stages/emotion_en.py applies softmax and
+#: takes argmax at serving time. Attributions computed through sigmoid
+#: therefore explain an activation the model was never trained or served with.
+#: Softmax is the default here for that reason. Pass --activation sigmoid only
+#: to reproduce the pre-2026 figures in docs/evaluation/interpretability_xai.md.
+DEFAULT_ACTIVATION = "softmax"
+
+_ACTIVATIONS = {
+    "sigmoid": torch.sigmoid,
+    "softmax": lambda logits: torch.softmax(logits, dim=-1),
+}
 
 
-def get_attributions_for_perturbation(sentence, model, tokenizer):
+def get_attributions_for_perturbation(sentence, model, tokenizer, activation, n_steps):
     model.eval()
 
     inputs = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True, max_length=512)
@@ -27,7 +65,7 @@ def get_attributions_for_perturbation(sentence, model, tokenizer):
         pooled = model.pooler(hidden_state)
         pooled = model.dropout(pooled)
         logits = model.classifier(pooled)
-        return torch.sigmoid(logits)
+        return activation(logits)
 
     with torch.no_grad():
         probs = forward_func(embeddings)
@@ -35,7 +73,7 @@ def get_attributions_for_perturbation(sentence, model, tokenizer):
 
     ig = IntegratedGradients(forward_func)
     attributions = ig.attribute(
-        inputs=embeddings, baselines=baseline_embeddings, target=target_idx, n_steps=50
+        inputs=embeddings, baselines=baseline_embeddings, target=target_idx, n_steps=n_steps
     )
 
     attr_scores = attributions.norm(dim=-1).squeeze(0).detach().cpu().numpy()
@@ -44,17 +82,17 @@ def get_attributions_for_perturbation(sentence, model, tokenizer):
     return attr_scores, tokens, target_idx, input_ids, attention_mask
 
 
-def perturbation_analysis(sentence, model, tokenizer):
+def perturbation_analysis(sentence, model, tokenizer, activation, n_steps):
     print(f"\nAnalyzing: '{sentence}'")
 
     attr_scores, tokens, target_emotion, input_ids, attention_mask = (
-        get_attributions_for_perturbation(sentence, model, tokenizer)
+        get_attributions_for_perturbation(sentence, model, tokenizer, activation, n_steps)
     )
 
     model.eval()
     with torch.no_grad():
         initial_outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        initial_probs = torch.sigmoid(initial_outputs.logits)
+        initial_probs = activation(initial_outputs.logits)
         initial_conf = initial_probs[0, target_emotion].item()
 
     maskable_indices = [i for i, tok in enumerate(tokens) if tok not in ["[CLS]", "[SEP]", "[PAD]"]]
@@ -75,7 +113,7 @@ def perturbation_analysis(sentence, model, tokenizer):
 
         with torch.no_grad():
             outputs = model(input_ids=masked_ids, attention_mask=attention_mask)
-            probs = torch.sigmoid(outputs.logits)
+            probs = activation(outputs.logits)
             conf = probs[0, target_emotion].item()
             confidences_least_first.append(conf)
 
@@ -88,7 +126,7 @@ def perturbation_analysis(sentence, model, tokenizer):
 
         with torch.no_grad():
             outputs = model(input_ids=masked_ids, attention_mask=attention_mask)
-            probs = torch.sigmoid(outputs.logits)
+            probs = activation(outputs.logits)
             conf = probs[0, target_emotion].item()
             confidences_most_first.append(conf)
 
@@ -105,7 +143,7 @@ def perturbation_analysis(sentence, model, tokenizer):
     }
 
 
-def plot_perturbation_curves(results):
+def plot_perturbation_curves(results, out_dir):
     sentence = results["sentence"]
     conf_least = results["conf_least_first"]
     conf_most = results["conf_most_first"]
@@ -148,10 +186,11 @@ def plot_perturbation_curves(results):
         .replace("—", "-")
         .replace("…", "")
     )
-    plt.savefig(f"part3_{safe_filename}.png", dpi=300, bbox_inches="tight")
-    plt.show()
+    out_path = out_dir / f"perturbation_{safe_filename}.png"
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close()
 
-    abc_score = np.sum(np.array(conf_least) - np.array(conf_most))
+    abc_score = float(np.sum(np.array(conf_least) - np.array(conf_most)))
 
     print(f"Initial confidence: {results['initial_confidence']:.4f}")
     print(f"Final conf least→most: {conf_least[-1]:.4f}")
@@ -175,6 +214,8 @@ def plot_perturbation_curves(results):
         else:
             print("Model may rely on distributed features")
 
+    return abc_score
+
 
 def analyze_token_importance(results):
     tokens = results["tokens"]
@@ -192,68 +233,104 @@ def analyze_token_importance(results):
             print(f"  {i}. '{tok}': {score:.4f}")
 
 
-if __name__ == "__main__":
-    test_sentences = {
-        "joy": [
-            "Everything worked out perfectly — we did it!",
-            "Come on, it's all fine!",
-            "Look, my friends — the border! I can see the sign, we're leaving Brazil!",
-        ],
-        "sadness": [
-            "We also had to witness death very often.",
-            "He pulled out an axe — and unfortunately, that's how these people end up…",
-            "Tabatinga is a very bleak city.",
-        ],
-        "anger": [
-            "Hide it — quickly, quickly, hide the camera!",
-            "If there's aggression or someone tries to open the door — we get out immediately!",
-            "This keeps happening all the time!",
-        ],
-        "fear": [
-            "This feels like some kind of extreme situation — everyone here is really scared.",
-            "What a terrifying place.",
-            "Honestly, I've got chills running down my spine.",
-        ],
-        "disgust": [
-            "But you didn't say it was cocaine.",
-            "I don't need you giving me cocaine!",
-            "Ugh, what kind of question is that?",
-        ],
-        "surprise": [
-            "Oh my God, what a question! Don't joke like that.",
-            "Why did you say it was flour?",
-            "We suddenly sped up like crazy!",
-        ],
+TEST_SENTENCES = {
+    "joy": [
+        "Everything worked out perfectly — we did it!",
+        "Come on, it's all fine!",
+        "Look, my friends — the border! I can see the sign, we're leaving Brazil!",
+    ],
+    "sadness": [
+        "We also had to witness death very often.",
+        "He pulled out an axe — and unfortunately, that's how these people end up…",
+        "Tabatinga is a very bleak city.",
+    ],
+    "anger": [
+        "Hide it — quickly, quickly, hide the camera!",
+        "If there's aggression or someone tries to open the door — we get out immediately!",
+        "This keeps happening all the time!",
+    ],
+    "fear": [
+        "This feels like some kind of extreme situation — everyone here is really scared.",
+        "What a terrifying place.",
+        "Honestly, I've got chills running down my spine.",
+    ],
+    "disgust": [
+        "But you didn't say it was cocaine.",
+        "I don't need you giving me cocaine!",
+        "Ugh, what kind of question is that?",
+    ],
+    "surprise": [
+        "Oh my God, what a question! Don't joke like that.",
+        "Why did you say it was flour?",
+        "We suddenly sped up like crazy!",
+    ],
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("checkpoint", type=Path, help="directory holding the model and tokenizer")
+    parser.add_argument("--out-dir", type=Path, default=Path("docs/evaluation/figures/xai"))
+    parser.add_argument("--out-json", type=Path, default=None)
+    parser.add_argument("--n-steps", type=int, default=50, help="integrated-gradients steps")
+    parser.add_argument("--activation", choices=sorted(_ACTIVATIONS), default=DEFAULT_ACTIVATION)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args()
+
+    if not args.checkpoint.is_dir():
+        parser.error(f"checkpoint directory not found: {args.checkpoint}")
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    activation = _ACTIVATIONS[args.activation]
+    model = AutoModelForSequenceClassification.from_pretrained(
+        args.checkpoint, local_files_only=True
+    ).to(args.device)
+    tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, local_files_only=True)
+    model.eval()
+
+    report: dict[str, object] = {
+        "checkpoint": str(args.checkpoint),
+        "activation": args.activation,
+        "n_steps": args.n_steps,
+        "device": args.device,
+        "emotions": {},
     }
 
-    all_results = {}
-
-    for emotion, sentences in test_sentences.items():
-        print(f"\n{'=' * 70}")
-        print(f"EMOTION: {emotion.upper()}")
-        print(f"{'=' * 70}")
-
-        all_results[emotion] = []
+    for emotion, sentences in TEST_SENTENCES.items():
+        print(f"\n{'=' * 70}\nEMOTION: {emotion.upper()}\n{'=' * 70}")
+        per_sentence = []
 
         for i, sentence in enumerate(sentences, 1):
-            print(f"\n[{i}/3] Testing: '{sentence}'")
-
-            results = perturbation_analysis(sentence, model, tokenizer)
-
+            print(f"\n[{i}/{len(sentences)}] {sentence}")
+            results = perturbation_analysis(sentence, model, tokenizer, activation, args.n_steps)
             if results is None:
                 continue
-            plot_perturbation_curves(results)
-
+            abc = plot_perturbation_curves(results, args.out_dir)
             analyze_token_importance(results)
+            per_sentence.append(
+                {
+                    "sentence": sentence,
+                    "predicted_class": int(results["target_emotion"]),
+                    "initial_confidence": float(results["initial_confidence"]),
+                    "abc": abc,
+                }
+            )
 
-            all_results[emotion].append(results)
+        abc_scores = [s["abc"] for s in per_sentence]
+        report["emotions"][emotion] = {
+            "sentences": per_sentence,
+            "mean_abc": float(np.mean(abc_scores)) if abc_scores else None,
+        }
+        if abc_scores:
+            print(f"{emotion.capitalize():12s}: mean ABC = {np.mean(abc_scores):.3f}")
 
-    for emotion, results_list in all_results.items():
-        abc_scores = []
-        for res in results_list:
-            abc = np.sum(np.array(res["conf_least_first"]) - np.array(res["conf_most_first"]))
-            abc_scores.append(abc)
+    if args.out_json:
+        args.out_json.parent.mkdir(parents=True, exist_ok=True)
+        args.out_json.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(f"\nwrote {args.out_json}")
+    print(f"figures in {args.out_dir}")
+    return 0
 
-        avg_abc = np.mean(abc_scores)
-        print(f"{emotion.capitalize():12s}: Avg ABC = {avg_abc:.3f}")
-    print("Part 3 Complete! Check the generated PNG files.")
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -20,22 +20,24 @@ documentation around it are new. Read this section before running anything.
 | Stages | Status | Notes |
 | --- | --- | --- |
 | 1-5B (download → translation) | Runnable | All models download from the Hub on first use |
-| 6A, 6B (valence-arousal) | **Blocked** | Needs `va-xlmroberta-large`; no weights, no training script in the archive |
+| 6A, 6B (valence-arousal) | Runnable after fetch | `scripts/fetch_va_checkpoint.sh`. The checkpoint is a published upstream model, pinned by digest. Its arousal head is weak — AUC 0.5734 on this project's own classes, see [PROVENANCE](docs/PROVENANCE.md) section 11 |
 | 7A (Russian emotion) | Runnable | Uses a third-party Hub model, not the group's own |
-| 7B (English emotion) | Partly runnable | DistilRoBERTa works; the "DeBERTa" slot is a stand-in, see below |
-| 8, 9 (timeline, CSV) | Blocked in practice | Consume stage 6/7 output |
+| 7B (English emotion) | Runnable after fetch | `scripts/fetch_emotion_en_checkpoint.sh`. Both ensemble slots are real: DistilRoBERTa and the retrained DeBERTa-v3-base (macro F1 0.8162) |
+| 8, 9 (timeline, CSV) | Runnable | Consume stage 6/7 output; the significance gate inherits 6A's weak arousal |
 
-Two checkpoints the pipeline expects do not exist anywhere in the archive, and
-neither does the code that produced them:
+Two checkpoints the pipeline expects were absent from the archive, along with
+the code that produced them. Both gaps are now closed:
 
 - **`va-xlmroberta-large`** (stages 6A and 6B) — an XLM-RoBERTa-large
-  valence-arousal regressor. Stages 7A and 7B gate on its output, so everything
-  from stage 6 onward is dead without it.
+  valence-arousal regressor. Stages 7A and 7B gate on its output, so nothing
+  from stage 6 onward ran without it. Found published upstream and mirrored
+  here; retraining it from scratch is still blocked on a valence-arousal
+  corpus, see [training/README.md](training/README.md).
 - **`emotion-en-deberta`** (stage 7B) — the DeBERTa classifier documented in
   [docs/model_cards/emotion_en_deberta.md](docs/model_cards/emotion_en_deberta.md).
+  Retrained here on 2026-09-16 from the committed corpus.
 
-Both now exist. The first was found published upstream and the second was
-retrained here, and both are release assets on this repository:
+Both are release assets on this repository:
 
 ```bash
 ./scripts/fetch_va_checkpoint.sh
@@ -52,9 +54,18 @@ vea models
 slot with `tae898/emoberta-large` — a third-party RoBERTa-large trained on MELD
 — while still writing its output to files named `emotion_deberta-finetuned_*`.
 Any result previously reported as coming from "our fine-tuned DeBERTa" was
-produced by EmoBERTa instead. The reported model-card metrics have not been
-reproduced by this repository. Details and the full audit:
+produced by EmoBERTa instead, and any output generated before the switch must
+be regenerated before it is reported. The slot now runs the real checkpoint,
+retrained here on 2026-09-16: macro F1 0.8162 against the card's 0.8127,
+accuracy 0.9202 against 0.8995. Details and the full audit:
 [docs/PROVENANCE.md](docs/PROVENANCE.md).
+
+The two reports in `docs/evaluation/` still describe the pre-rebuild
+checkpoint and are banner-marked as such. `error_analysis.md` regenerates in
+full from `training/emotion_en_deberta/error_analysis.py`;
+`interpretability_xai.md` needs
+`training/interpretability/attention_analysis.py` rerun against a fetched
+checkpoint.
 
 ## Install
 
