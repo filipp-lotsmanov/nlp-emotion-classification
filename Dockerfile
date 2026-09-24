@@ -3,9 +3,11 @@
 # Two images from one file, because the project splits that way already:
 #
 #   --target viewer   API + the run reader. Reads finished runs out of /data,
-#                     serves the timeline and the segment table. No torch, no
-#                     CUDA, no ffmpeg. ~400 MB. Runs anywhere, including a
-#                     laptop with no GPU, which is what makes it demoable.
+#                     serves the timeline and the segment table. No ffmpeg,
+#                     so it cannot run stage 1; but `--extra api` still pulls
+#                     the core dependencies, torch among them, so it is not
+#                     small. Runs anywhere, including a laptop with no GPU,
+#                     which is what makes it demoable.
 #
 #   --target app      everything above plus ffmpeg, Whisper, NLLB and the
 #                     classifiers. Runs the whole nine-stage pipeline on a
@@ -44,11 +46,17 @@ WORKDIR /app
 # /data is the only path either image writes to. `downloads/` and `models/` are
 # symlinks into it because that is where the CLI's own defaults point, so a
 # bind-mounted volume survives every rebuild with the model cache intact.
+# `models_cache/` is where stage 5B caches NLLB (translate.py), relative to the
+# working directory. Without the link, ~17 GB lands in the container layer and is
+# downloaded again every time the container is recreated. It targets
+# /data/models rather than a new directory because a volume created before this
+# line has no new directory, and a dangling link would fail stage 5B.
 RUN useradd --create-home --uid 10001 vea \
  && install -d -o vea -g vea \
       /data /data/downloads /data/models /data/jobs /data/cache /data/cache/matplotlib \
  && ln -s /data/downloads /app/downloads \
- && ln -s /data/models /app/models
+ && ln -s /data/models /app/models \
+ && ln -s /data/models /app/models_cache
 
 ENV VEA_DATA_DIR=/data \
     VEA_MODELS_DIR=/data/models \
@@ -104,7 +112,8 @@ CMD ["serve", "--host", "0.0.0.0", "--downloads", "/data/downloads"]
 # layer that is overwritten is still a layer that is pulled.
 FROM base AS app-deps
 
-# ffmpeg turns a download into the 16 kHz mono that stage 3 expects.
+# ffmpeg is what stage 1 (yt-dlp) uses to turn a download into the 16 kHz mono
+# that stage 3 expects.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
@@ -191,8 +200,8 @@ COPY --link corpora/ ./corpora/
 COPY --link training/ ./training/
 COPY --link scripts/ ./scripts/
 
-# Both caches go to the volume, so the first run's ~4 GB of model downloads
-# survives into the second.
+# Both caches go to the volume, so the first run's model downloads (over 20 GB
+# with the default nllb-3.3b) survive into the second.
 ENV HF_HOME=/data/models \
     XDG_CACHE_HOME=/data/cache
 

@@ -58,6 +58,7 @@ logger = logging.getLogger(__name__)
 
 def load_semantic_model(
     model_name: str = "paraphrase-multilingual-MiniLM-L12-v2",
+    device: Optional[str] = None,
 ) -> Optional[SentenceTransformer]:
     """
     Load sentence embedding model for semantic similarity.
@@ -82,7 +83,7 @@ def load_semantic_model(
     try:
         logger.info(f"Loading semantic model: {model_name}")
         start = time.time()
-        model = SentenceTransformer(model_name)
+        model = SentenceTransformer(model_name, device=device)
         elapsed = time.time() - start
         logger.info(f"Model loaded in {elapsed:.1f}s")
         return model

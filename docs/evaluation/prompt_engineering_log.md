@@ -27,7 +27,7 @@
 - **F1:** 0.7296, **Accuracy:** 0.7672
 - **Temperature:** 0.05
 - **Changes:** 15 examples, focused on neutral vs fear distinction
-- **Issue:** Temperature too high, accuracy dropped despite maintaining F1
+- **Issue:** Temperature too high; F1 held flat (0.7298 → 0.7296) even though accuracy rose (0.7079 → 0.7672)
 
 ---
 
@@ -66,7 +66,7 @@
 - **F1:** 0.7700, **Accuracy:** 0.7954
 - **Temperature:** 0.01
 - **Breakthrough:** Added keyword-based post-processing layer
-- **Progress:** First time breaking 0.77 F1!
+- **Progress:** First time reaching 0.77 F1!
 
 ---
 
@@ -132,7 +132,7 @@
 - Neutral: `убийства происходят` (with numbers = statistics)
 
 ### Challenge 3: Temperature Sensitivity
-- **0.01:** Too conservative (F1 = 0.77)
+- **0.01:** Too conservative (F1 = 0.7700 in iteration 9 and 0.7936 in iteration 11; iteration 5 also ran at 0.01 and scored 0.3934 with a different prompt)
 - **0.025:** Optimal balance (F1 = 0.8128) ✅
 - **0.03:** Slightly unstable (F1 = 0.8115)
 
@@ -160,6 +160,9 @@ CIA annotations are highly conservative on neutral classification, treating many
 ---
 
 ## Deliverables
-✅ `prompt_engineering.py` - Best performing implementation  
-✅ `prompt_engineering_log.csv` - Complete iteration history  
-✅ `prompt_engineering_log.md` - This document
+- `prompt_engineering.py` - Best performing implementation. **Not included in
+  this repository:** the archived copy did not parse (a syntax error), so it
+  could never have run; see `docs/PROVENANCE.md` section 3.
+- `prompt_engineering_log.csv` - Complete iteration history. **Not included in
+  this repository.**
+- `prompt_engineering_log.md` - This document

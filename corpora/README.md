@@ -9,12 +9,14 @@ no usable file browser and these are the only route to getting them onto it.
 | `super_emotion_clean.csv.gz` | 419,180 | English | `emotion-en-deberta` (stage 7B) |
 | `ru_izard_emotions.csv.gz` | 24,766 | Russian | `emotion-ru-finetuned` (not wired in) |
 
-Both are **CC BY-SA 4.0** by inheritance from `cirimus/super-emotion`; the
-Russian file is MIT by inheritance from `Djacon/ru-izard-emotions`. See
+The English file is **CC BY-SA 4.0** by inheritance from
+`cirimus/super-emotion`; the Russian file is MIT by inheritance from
+`Djacon/ru-izard-emotions`. See
 `docs/LICENSING.md` before redistributing either, or any model trained on them.
 
 Neither file contains valence or arousal annotations, so `va-xlmroberta-large`
-(stages 6A and 6B) is still unbuildable from what is in this repository.
+(stages 6A and 6B) still cannot be rebuilt from what is in this repository; the
+pipeline uses the released checkpoint instead (see `training/README.md`).
 
 ## Integrity
 
@@ -61,16 +63,19 @@ does check out. This was verified, not assumed:
 So this is the genuine published corpus minus the 9,151 synthetic Disgust rows
 that did not survive, which is the documented and expected shortfall. The
 metrics in `docs/model_cards/emotion_en_deberta.md` are therefore *nearly*
-comparable to anything trained here — 2.2% of the training rows, and 64% of the
+comparable to anything trained here — 2.1% of the training rows, and 64% of the
 Disgust class, are absent. Report that difference rather than the card's numbers.
 
 ### The text is already cleaned — do not clean it again
 
-`vea.text_clean.clean_text` is idempotent on 99.9% of a 3,000-row sample. The
-0.1% that changes is the `[TAG]` placeholder, which the vendored cleaner folds to
-`[tag]` and the published build left uppercase. Re-running the cleaner over this
-file would therefore shift ~0.1% of rows away from what the published model saw,
-for no benefit. `training/emotion_en_deberta/train.py` does not clean, and
+`vea.text_clean.clean_text` leaves 99.92% of this file unchanged: over all
+419,180 rows, 349 (0.083%) change on a second pass. 301 of those contain the tag
+placeholder, which the vendored cleaner folds to `[tag]` where it touches
+punctuation and the published build left uppercase; the other 48 are other
+placeholders lowercased the same way, mixed `!?` runs, and three slang words
+(see `docs/PROVENANCE.md`, "`[TAG]` is the one place..."). Re-running the cleaner
+over this file would therefore shift those rows away from what the published
+model saw, for no benefit. `training/emotion_en_deberta/train.py` does not clean, and
 asserts idempotence on a sample so a future change to the cleaner is caught.
 
 At inference the pipeline *does* apply `clean_text` (via
@@ -88,11 +93,14 @@ without diverging from the training data.
 
 ### 178 texts carry conflicting labels
 
-444 texts appear more than once; 178 of them under two different labels, 362 rows
-in total (0.086%). Every conflict involves Disgust, which is what rule 2 would
-predict: the same string reached the collapse twice and the source-annotation
-restoration fired for one copy. Too small to matter for the loss, but large
-enough to leak across a random split, so `train.py` splits on **unique text**,
+444 texts appear more than once; 178 of them under different labels (176 under
+two, 2 under three), 362 rows in total (0.086%). 86 of the 178 conflicts involve
+Disgust, which is what rule 2 would predict for those: the same string reached
+the collapse twice and the source-annotation restoration fired for one copy. The
+other 92 do not involve Disgust at all. In every conflict the copies carry
+different `labels_source` annotations, and 174 of the 178 sit within a single
+source (mostly SemEval), so the string was annotated more than once upstream.
+Too small to matter for the loss, but large enough to leak across a random split, so `train.py` splits on **unique text**,
 not on rows.
 
 ### The largest source is misattributed
@@ -171,9 +179,9 @@ Columns: `text`, `label`, `source`. Same seven Title-cased labels. Single source
 | Fear | 1,898 |
 | Surprise | 1,631 |
 
-Better balanced than the English set — Neutral:Surprise is 4.8:1 against the
-English 11:1 — and it has 2,714 genuine Disgust rows where the English set has
-5,165 across 80× more data.
+Better balanced than the English set — largest to smallest class is 4.8:1
+(Neutral:Surprise) against the English 28.6:1 (Joy:Disgust) — and it has 2,714
+genuine Disgust rows where the English set has 5,165 across ~17× more data.
 
 **This text is raw, not cleaned.** No `[CAPS]` tokens, 2,553 rows with uppercase
 outside a bracketed placeholder, 437 rows containing emoji, 7 containing a bare
@@ -189,12 +197,14 @@ Two things to check with whoever built it:
   interjections pass through untranslated.
 - **It is not the set the group's own notebook builds.**
   `training/emotion_ru/01_build_dataset.ipynb` loads the same upstream corpus
-  multi-label, drops `shame` and `guilt`, and downsamples to 1,996 rows per
-  label — about 14,000 rows, balanced. This file is 24,766, single-label and
-  unbalanced, so `training/emotion_ru/grid_search_results.csv` describes a
-  different dataset and its metrics do not transfer. The count is consistent
-  with the upstream `train` split reduced to single-label rows, but no record of
-  the filter exists here.
+  multi-label, drops `shame` and `guilt`, keeps eight labels (`enthusiasm`
+  included) and downsamples to 1,996 rows per label — 7,006 rows, balanced. This
+  file is 24,766, single-label and unbalanced, so
+  `training/emotion_ru/grid_search_results.csv` describes a different dataset
+  and its metrics do not transfer. Where the 24,766 rows come from is not
+  established: they are not the upstream `train` split reduced to single-label
+  rows, which the notebook's own output shows as 20,162 rows, 8,781 of them
+  single-label, and no record of the build exists here.
 
 `emotion-ru-finetuned` is not referenced by the shipped pipeline — stage 7A uses
 the hub checkpoint `Djacon/rubert-tiny2-russian-emotion-detection` instead, which

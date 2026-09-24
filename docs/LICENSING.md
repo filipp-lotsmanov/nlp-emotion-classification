@@ -19,6 +19,13 @@ fine-tuned checkpoint is a derived work of its training data. So:
 If you split the repository so no CC BY-SA 4.0 data or weights ship with the
 code, the authors can relicense the code.
 
+One upstream question this page does not settle: about 83% of the English
+corpus is `dair-ai/emotion` (CARER), which `cirimus/super-emotion` redistributes
+under the label `ISEAR` — see `docs/PROVENANCE.md` section 7. That dataset
+carries its own upstream licence, which has not been assessed here. Check it
+before relying on CC BY-SA 4.0 as the only term attached to the corpus or to
+`emotion-en-deberta`.
+
 ## The non-commercial constraint
 
 Stage 5B translation uses **NLLB-200**, which Meta releases under
@@ -48,17 +55,30 @@ licence travels with the reference rather than living only in prose:
 | Whisper large-v3 (faster-whisper) | 4 | MIT | Yes |
 | `paraphrase-multilingual-MiniLM-L12-v2` | 5A | Apache-2.0 | Yes |
 | `facebook/nllb-200-*` | 5B | **CC-BY-NC-4.0** | **No** |
-| `va-xlmroberta-large` (to be trained) | 6A, 6B | Depends on your corpus | Depends |
+| `va-xlmroberta-large` (published checkpoint, fetched) | 6A, 6B | MIT (mirror) | Yes by its licence; training-data terms not assessed |
 | `Djacon/rubert-tiny2-russian-emotion-detection` | 7A | MIT | Yes |
 | `j-hartmann/emotion-english-distilroberta-base` | 7B | MIT | Yes |
-| `tae898/emoberta-large` | 7B (stand-in) | MIT | Yes |
-| `emotion-en-deberta` (to be trained) | 7B | **CC-BY-SA-4.0** | Yes, with ShareAlike |
+| `tae898/emoberta-large` | None (registered, loaded by no stage) | MIT | Yes |
+| `emotion-en-deberta` (retrained, released) | 7B | **CC-BY-SA-4.0** | Yes, with ShareAlike |
 
-The VA regressor's licence is not yet determined because its training corpus
-has not been chosen — see `training/README.md`. Check the licence *before* you
-train: EmoBank is CC-BY-SA 4.0, which would add a second ShareAlike source, and
-some VA lexica are research-only, which would make the whole pipeline
+The VA regressor is not trained here. It is the published checkpoint from
+[gmendes9/multilingual_va_prediction](https://github.com/gmendes9/multilingual_va_prediction)
+(Mendes & Martins, ECIR 2023), whose repository is MIT, re-hosted byte-identical
+as a release asset of this repository — hence "MIT (mirror)" in the registry.
+See `docs/PROVENANCE.md` section 11. That licence covers what the authors
+released; the checkpoint was trained on 34 psycho-linguistic datasets across
+100 languages, and the terms of those datasets have not been assessed here.
+Some VA lexica are research-only, so read the upstream dataset list before
+relying on the MIT label for commercial use.
+
+If you train a replacement with `training/va_regressor/train.py`, check the
+licence *before* you train: EmoBank is CC-BY-SA 4.0, which would add a second
+ShareAlike source, and a research-only lexicon would make the whole pipeline
 research-only regardless of what you do about NLLB.
+
+`tae898/emoberta-large` stays in the registry only so that outputs produced
+before stage 7B was switched to `emotion-en-deberta` remain reproducible; no
+stage loads it.
 
 Verify each licence yourself before relying on this table; upstream terms
 change, and two of these entries were read from documentation rather than from

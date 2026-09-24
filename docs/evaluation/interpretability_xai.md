@@ -18,9 +18,11 @@ uv run --extra xai python training/interpretability/attention_analysis.py \
 
 ## What this replaced, and why
 
-The previous version of this report is not recoverable and should not be
-cited. It was wrong in three independent ways, each of which changed its
-conclusions:
+The previous version of this report is in git history - commit f6bc566,
+`docs/evaluation/interpretability_xai.md`, alongside the
+`training/interpretability/attention_analysis.py` that produced it - but it
+should not be cited. It was wrong in three independent ways, each of which
+changed its conclusions:
 
 1. **It analysed a checkpoint that is not in this repository**, reached through
    an absolute path on one machine. See [PROVENANCE](../PROVENANCE.md).
@@ -29,13 +31,19 @@ conclusions:
    plus LayerNorm - then fed that back as `inputs_embeds`, which made
    `DebertaV2Model` add positions and normalise a second time. Attributions
    therefore described a different model from the one the ablation curves
-   measured. The symptom was unmissable in hindsight: reported confidences as
+   measured. The committed symptom is attribution mass concentrated on
+   punctuation, which that report itself notes ("punctuation remains
+   overweighted"). An interim rerun under softmax also reported confidences as
    low as 0.0001 for the *predicted* class, which softmax over seven classes
-   cannot produce, and attribution mass concentrated on commas and full stops.
-3. **It integrated the softmax rather than the logit.** Above roughly 0.97
-   confidence the softmax gradient is flat along the whole integration path, so
-   IG accumulated numerical noise. Attribution rankings were then unstable
-   between step counts - one Joy sentence moved from ABC +1.06 to -0.10, and
+   cannot produce; that run's output was never committed, so the figure cannot
+   be reproduced from anything in this repository.
+3. **It integrated a saturating activation rather than the logit.** The f6bc566
+   script integrates `torch.sigmoid(logits)`; the interim version in commit
+   1f72312 defaulted to softmax. Near confident predictions either one's
+   gradient is flat along much of the integration path, so IG accumulated
+   numerical noise. Attribution rankings were then unstable between step counts
+   - in interim runs whose output was not committed, and so is not reproducible
+   from committed artefacts, one Joy sentence moved from ABC +1.06 to -0.10 and
    Anger's mean crossed zero - which meant the sign of a result depended on a
    parameter nobody had reason to tune.
 
@@ -68,26 +76,34 @@ maximum delta of 0.0000. Defect 2 above could not recur silently.
 
 ## Results
 
-| Emotion | Sentence | Confidence | IG delta | ABC |
-|---|---|---:|---:|---:|
-| Joy | Everything worked out perfectly - we did it! | 0.999 | 2.14 | +1.31 |
-| Joy | Come on, it's all fine! | 0.444 | 0.04 | +4.24 |
-| Joy | Look, my friends - the border! ... | 0.291 | 2.37 | +3.38 |
-| Sadness | We also had to witness death very often. | 0.935 | 0.62 | +2.34 |
-| Sadness | He pulled out an axe - and unfortunately ... | 0.462 | 2.55 | +7.89 |
-| Sadness | Tabatinga is a very bleak city. | 0.813 | 13.85 | +5.76 |
-| Anger | Hide it - quickly, quickly, hide the camera! | 0.388 | 2.44 | **-3.64** |
-| Anger | If there's aggression or someone tries ... | 0.994 | 4.67 | +5.05 |
-| Anger | This keeps happening all the time! | 0.934 | 10.92 | +0.70 |
-| Fear | This feels like some kind of extreme situation ... | 0.974 | 1.21 | +7.29 |
-| Fear | What a terrifying place. | 0.553 | 1.14 | +3.58 |
-| Fear | Honestly, I've got chills running down my spine. | 0.656 | 0.57 | +4.79 |
-| Disgust | But you didn't say it was cocaine. | 0.907 | 11.80 | +3.92 |
-| Disgust | I don't need you giving me cocaine! | 0.844 | 1.93 | **-1.14** |
-| Disgust | Ugh, what kind of question is that? | 0.543 | 1.92 | +1.17 |
-| Surprise | Oh my God, what a question! ... | 0.704 | 2.28 | **-2.49** |
-| Surprise | Why did you say it was flour? | 0.767 | 1.25 | +0.34 |
-| Surprise | We suddenly sped up like crazy! | 0.714 | 0.83 | **-0.31** |
+| Emotion | Sentence | Predicted | Confidence | IG delta | ABC |
+|---|---|---|---:|---:|---:|
+| Joy | Everything worked out perfectly - we did it! | Joy | 0.999 | 2.14 | +1.31 |
+| Joy | Come on, it's all fine! | Joy | 0.444 | 0.04 | +4.24 |
+| Joy | Look, my friends - the border! ... | Surprise | 0.291 | 2.37 | +3.38 |
+| Sadness | We also had to witness death very often. | Sadness | 0.935 | 0.62 | +2.34 |
+| Sadness | He pulled out an axe - and unfortunately ... | Disgust | 0.462 | 2.55 | +7.89 |
+| Sadness | Tabatinga is a very bleak city. | Disgust | 0.813 | 13.85 | +5.76 |
+| Anger | Hide it - quickly, quickly, hide the camera! | Joy | 0.388 | 2.44 | **-3.64** |
+| Anger | If there's aggression or someone tries ... | Anger | 0.994 | 4.67 | +5.05 |
+| Anger | This keeps happening all the time! | Anger | 0.934 | 10.92 | +0.70 |
+| Fear | This feels like some kind of extreme situation ... | Fear | 0.974 | 1.21 | +7.29 |
+| Fear | What a terrifying place. | Disgust | 0.553 | 1.14 | +3.58 |
+| Fear | Honestly, I've got chills running down my spine. | Fear | 0.656 | 0.57 | +4.79 |
+| Disgust | But you didn't say it was cocaine. | Neutral | 0.907 | 11.80 | +3.92 |
+| Disgust | I don't need you giving me cocaine! | Anger | 0.844 | 1.93 | **-1.14** |
+| Disgust | Ugh, what kind of question is that? | Anger | 0.543 | 1.92 | +1.17 |
+| Surprise | Oh my God, what a question! ... | Surprise | 0.704 | 2.28 | **-2.49** |
+| Surprise | Why did you say it was flour? | Surprise | 0.767 | 1.25 | +0.33 |
+| Surprise | We suddenly sped up like crazy! | Surprise | 0.714 | 0.83 | **-0.31** |
+
+The Emotion column is the emotion each sentence was *chosen to represent*, not the
+model's output. The model predicted a different class for 8 of the 18, shown in
+the Predicted column (class indices from `predicted_class` in
+`xai_report.json`, in the alphabetical label order of
+`training/emotion_en_deberta/data_prep.py`). Confidence, IG and ABC are all
+computed for the predicted class, so the per-emotion means below average over
+the intended-label groups, not over what the model decided.
 
 | Emotion | Mean ABC |
 |---|---:|
@@ -106,7 +122,8 @@ attribution ranking for every sentence is in `xai_report.json` under
 
 **Attribution rankings are stable.** The same run at 50 and at 300 integration
 steps produced ABC values agreeing to within 0.5 on every sentence, with no
-sign changes. Before the logit fix the same comparison flipped two results.
+sign changes. Before the logit fix the same comparison flipped two results
+(interim runs, not committed).
 Whatever these rankings say, they do not depend on the step count.
 
 **Rankings are semantically coherent.** The highest-attribution tokens are the

@@ -23,13 +23,13 @@
 # WHICH PROFILE
 #
 # The default is `viewer`: the read-only API plus the frontend. It has no
-# torch, no CUDA and no ffmpeg, it builds in a couple of minutes, and it can
-# show every run already in the volume. That is the demo.
+# ffmpeg, so it cannot run the pipeline, but it still installs torch (a core
+# dependency), and it can show every run already in the volume. The demo.
 #
 # `--full` builds the `app` image instead - several GB, and its first run pulls
-# roughly 4 GB of model weights. Use it to analyse a video of your own. With no
-# card it runs on the CPU at roughly a tenth of the speed, and the build then
-# also skips the 1.4 GB CUDA 12 runtime that only a card would load.
+# over 20 GB of weights with the default nllb-3.3b. Use it to analyse a video.
+# With no card it runs on the CPU at roughly a tenth of the speed, and the
+# build then also skips the ~600 MB CUDA 12 cuBLAS that only a card would load.
 #
 # Both publish to 127.0.0.1 only. The API has no authentication and it hands a
 # caller-supplied URL to yt-dlp, so anyone who can reach port 8000 can spend
@@ -124,7 +124,7 @@ if [[ "$PROFILE" == "app" ]]; then
     elif ! command -v nvidia-smi >/dev/null 2>&1; then
         warn "no nvidia-smi on the host: building and running on the CPU."
         warn "a two-hour recording then takes most of a day rather than most of an hour."
-        # Nothing will load libcublas.so.12, so do not ship 1.4 GB of it.
+        # Nothing will load libcublas.so.12, so do not ship ~600 MB of it.
         export CUDA_RUNTIME=0
     elif docker run --rm --gpus all ubuntu:22.04 nvidia-smi -L >/dev/null 2>&1; then
         ok "containers can see the GPU: $(nvidia-smi -L | head -1)"
@@ -140,7 +140,7 @@ if [[ "$PROFILE" == "app" ]]; then
         export CUDA_RUNTIME=0
     fi
     if [[ "${CUDA_RUNTIME:-1}" == "0" ]]; then
-        ok "CPU build: skipping the 1.4 GB CUDA 12 runtime"
+        ok "CPU build: skipping the ~600 MB CUDA 12 cuBLAS"
     fi
 fi
 
@@ -224,7 +224,8 @@ if command -v python3 >/dev/null 2>&1; then
         | python3 -c 'import json,sys; print(",".join(json.load(sys.stdin)["missing_checkpoints"]))' 2>/dev/null || true)"
     if [[ -n "$missing" ]]; then
         warn "missing checkpoints: $missing"
-        warn "the viewer still reads finished runs; fetch them with scripts/fetch_va_checkpoint.sh to run new ones."
+        warn "the viewer still reads finished runs. To run new ones, fetch them with scripts/fetch_va_checkpoint.sh"
+        warn "and scripts/fetch_emotion_en_checkpoint.sh, then copy them into the volume: see SETUP.md."
     else
         ok "all required checkpoints present"
     fi

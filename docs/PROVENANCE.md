@@ -28,14 +28,18 @@ Consequences:
    loaded by the pipeline.
 2. The "dual-model ensemble" was DistilRoBERTa + EmoBERTa, both third-party.
    The claim that the ensemble validates the group's own model does not hold.
-3. The XAI report in `docs/evaluation/interpretability_xai.md` analysed the real
-   DeBERTa checkpoint via a local path, so it describes a *different model* from
-   the one the pipeline ran.
+3. The original XAI report in `docs/evaluation/interpretability_xai.md` analysed
+   the real DeBERTa checkpoint via a local path, so it described a *different
+   model* from the one the pipeline ran.
 
 This is recorded in the code at the point of the defect: see the
 `stage_7b_english_emotion` comment in `src/vea/pipeline.py` and the
-`emotion-en-emoberta` entry in `src/vea/config.py`. After retraining, switch
-that slot's `model` key to `emotion-en-deberta` and rerun the affected videos.
+`emotion-en-emoberta` entry in `src/vea/config.py`. The checkpoint has since
+been retrained (section 10) and the slot's `model` key switched to
+`emotion-en-deberta`, and the XAI report was regenerated against that same
+checkpoint (`docs/evaluation/xai_report.json`), so point 3 no longer applies.
+Any output produced before the switch is still EmoBERTa and must be regenerated
+before it is reported.
 
 ## 2. Missing weights and missing training code
 
@@ -61,7 +65,8 @@ A fourth observation: the Russian emotion model the group trained
 (`training/emotion_ru/`, three architectures, 27-configuration grid search) is
 **not used by the pipeline**. Stage 7A loads the third-party
 `Djacon/rubert-tiny2-russian-emotion-detection` instead. The grid search's best
-macro F1 was around 0.53, which plausibly explains the decision, but the
+macro F1 was 0.5825 (`ai-forever/ruBert-base`; `cointegrated/rubert-tiny2` peaked at
+0.537), per `training/emotion_ru/grid_search_results.json`, which plausibly explains the decision, but the
 decision is undocumented — worth stating explicitly in any report rather than
 leaving the reader to assume the group's own model is in the pipeline.
 
@@ -84,11 +89,11 @@ leaving the reader to assume the group's own model is in the pipeline.
 | `src/vea/stages/emotion_en.py` | `Task12/emotion_classifier_en.py` | as above, plus CUDA pin removed |
 | `src/vea/stages/visualize.py` | `Task12/visualization.py` | as above |
 | `src/vea/stages/export.py` | `Task12/csv_generator.py` | as above |
-| `docs/ARCHITECTURE.md` | `Task12/README.md` | unchanged content |
-| `docs/model_cards/emotion_en_deberta.md` | `Task11/Model_card.md` | unchanged content |
-| `docs/evaluation/error_analysis.md` | `Task9/README.md` | unchanged content |
-| `docs/evaluation/interpretability_xai.md` | `Task10/README.md` | unchanged content |
-| `docs/evaluation/prompt_engineering_log.md` | `Task 8/prompt_engineering_log.md` | unchanged content |
+| `docs/ARCHITECTURE.md` | `Task12/README.md` | rewritten to the current package layout, commands and file names |
+| `docs/model_cards/emotion_en_deberta.md` | `Task11/Model_card.md` | dataset table corrected, CARER claim retracted, 2026-09-16 reproduction added (sections 6, 7, 10) |
+| `docs/evaluation/error_analysis.md` | `Task9/README.md` | regenerated against the retrained checkpoint in commit 1ef5f03 (section 15) |
+| `docs/evaluation/interpretability_xai.md` | `Task10/README.md` | regenerated against the retrained checkpoint in commit 1ef5f03 |
+| `docs/evaluation/prompt_engineering_log.md` | `Task 8/prompt_engineering_log.md` | content kept; factual slips against its own tables corrected |
 | `docs/evaluation/feature_exploration.ipynb` | `Task4/NLP_features.ipynb` | unchanged content |
 | `training/emotion_ru/01_build_dataset.ipynb` | `emotion-iteration/Cleaning.ipynb` | unchanged content |
 | `training/emotion_ru/train_single.py` | `emotion-iteration/model_1.py` | unchanged |
@@ -124,8 +129,9 @@ copy.
 
 ## 4. Defects fixed during the revival
 
-Each of these is now covered by a static guard in
-`tests/test_source_hygiene.py`, so it fails CI if reintroduced.
+Items 1-4 and 9 are covered by static guards in
+`tests/test_source_hygiene.py`, so they fail CI if reintroduced. Items 5-8 are
+structural fixes with no dedicated guard there.
 
 1. **GPU pinned at import time.** Four modules ran
    `os.environ['CUDA_VISIBLE_DEVICES'] = '5'` before importing torch. On any
@@ -147,7 +153,7 @@ Each of these is now covered by a static guard in
    why the pipeline could not be imported or tested.
 6. **`pip freeze` as a dependency spec.** 103 pins including 18
    `nvidia-*-cu12` wheels, uninstallable on CPU-only or macOS hosts. Replaced
-   by 13 direct dependencies plus `uv.lock`.
+   by 14 direct dependencies plus `uv.lock`.
 7. **Python version contradiction.** `Task12/README.md` claimed Python 3.8+,
    while `Task6` and `Task10` pinned `requires-python = ">=3.13"`. Resolved to
    3.11-3.13, verified against the published wheel matrix of `ctranslate2`,
@@ -172,7 +178,7 @@ Each of these is now covered by a static guard in
 
    The revival's own first test suite did *not* get this right: three
    `read_text()` calls in the guard tests lacked an encoding and failed on
-   Windows against `align.py`, which contains 76 lines of Cyrillic docstring
+   Windows against `align.py`, which contains 68 lines of Cyrillic docstring
    examples. Fixed, and the guard above is the reason it cannot recur.
 
 ## 5. Known issues not fixed
@@ -180,11 +186,13 @@ Each of these is now covered by a static guard in
 Left alone deliberately, because fixing them means changing behaviour of code
 that currently works. Each is a reasonable next commit.
 
-- **TensorFlow imported for two utility functions.** `training/baselines/models/{lstm,gru,rnn}.py`
-  import `tensorflow.keras.preprocessing` for `Tokenizer` and `pad_sequences`
-  inside otherwise pure PyTorch models — roughly 600 MB of dependency for
-  vocabulary building and padding, which is about 20 lines of numpy. Now an
-  opt-in extra (`uv sync --extra tensorflow`) rather than a hard requirement.
+- **A `tensorflow` extra with nothing in this repository that uses it.** This
+  entry used to say that `training/baselines/models/{lstm,gru,rnn}.py` import
+  `tensorflow.keras.preprocessing` for `Tokenizer` and `pad_sequences`. No such
+  files exist in any committed version: the `models/` part of `Task6` listed in
+  the section 3 mapping was not carried over, and no committed Python file
+  imports `tensorflow` or `keras`. The extra (`uv sync --extra tensorflow`) is
+  therefore opt-in and currently unused by anything in this repository.
 - **`downloads/` vs `data/`.** Stage 1's default `base_output` is still the
   literal string `downloads`, while `VEA_DATA_DIR` defaults to `data/`. Threading
   the setting through stage 1 means touching the stage's own path handling.
@@ -198,7 +206,7 @@ that currently works. Each is a reasonable next commit.
 
 ## 6. The English emotion dataset: corrections and a ported cleaner
 
-Added after the dataset build record (`dataset.md`) reached this repository.
+Added after the dataset build record (`docs/dataset_build.md`) reached this repository.
 
 ### The model card's dataset table is wrong
 
@@ -226,7 +234,8 @@ The card's dataset table matches none of these and appears to be a garbled
 transcription - it reports disgust as 9,151, which is actually the count of
 synthetic rows, and fear as 13,401, which is actually neutral's count.
 `training/emotion_en_deberta/data_prep.py` uses the build record's numbers and
-cites this. **The model card's dataset table needs correcting.**
+cites this. **The model card's dataset table has since been corrected** to the
+build record's figures, with a note explaining the change.
 
 ### A rebuild stops at 419,180 rows, and that is correct
 
@@ -312,8 +321,8 @@ does. Measured, not assumed, and pinned in
   `vea.text_clean.clean_text` on 99.9% of a sample.
 
 That is a corpus whose build record can be trusted. It also settles the dispute
-in section 6: the record is authoritative over the model card, and the card's
-dataset table stays wrong.
+in section 6: the record is authoritative over the model card, which is why the
+card's dataset table was corrected to it.
 
 ### What does not: the `ISEAR` block is `dair-ai/emotion`
 
@@ -388,9 +397,13 @@ given for it is not the one the data supports.
 ### Smaller findings
 
 **178 texts carry conflicting labels.** 444 texts appear more than once, 178 of
-them under two labels, 362 rows in total (0.086%). Every conflict involves
-Disgust, which is what rule 2 predicts: the same string reached the collapse
-twice and the source-annotation restoration fired for one copy. Too small to
+them under two or more labels (176 under two, 2 under three), 362 rows in total
+(0.086%). 86 of the 178 involve Disgust, 85 of them entirely within SemEval, which is what
+rule 2 predicts: the same string reached the collapse twice and the
+source-annotation restoration fired for one copy. The other 92 involve no
+Disgust and are not explained by rule 2; 89 of them are the same text labelled
+differently within a single source (SemEval 52, Crowdflower 37), the remaining
+3 across sources. Too small to
 affect the loss, large enough to leak across a random split, so the trainer
 splits on unique text rather than on rows.
 
@@ -404,9 +417,15 @@ SemEval. Not fixable without diverging from the training data.
 
 **`[TAG]` is the one place the cleaner and the corpus disagree.**
 `mark_shouting` protects a placeholder only as a whole token, so `[TAG] hello`
-survives while `[TAG]._.; hi` becomes `[tag]._.; hi`. That is the whole of the
-0.1% idempotence shortfall, and it affects no realistic pipeline input, since
-`[TAG]` is a Twitter-mention artefact.
+survives while `[TAG]._.; hi` becomes `[tag]._.; hi`. That is most, not all, of
+the idempotence shortfall: over the full corpus 349 rows (0.083%) change on a
+second pass, and 301 of them contain the tag placeholder (298 as `[TAG]`, 3
+already as `[tag]`). Of the other 48, 37 are the same
+whole-token rule lowercasing a different placeholder (`[CAPS]`, `[NUM]`) that
+touches punctuation, 8 are mixed `!?` runs being collapsed, and 3 are slang
+expansions (`dunno`, `gonna`, `wassup`) the stored text had not received. The
+`[TAG]` cases affect no realistic pipeline input, since `[TAG]` is a
+Twitter-mention artefact.
 
 ### The head type, resolved
 
@@ -424,7 +443,8 @@ statistic on its own validation set so the comparison can be made honestly.
 
 `corpora/ru_izard_emotions.csv.gz` arrived in the same delivery: 24,766 rows
 from `Djacon/ru-izard-emotions` over the same seven classes, better balanced
-than the English set (Neutral:Surprise 4.8:1 against 11:1) with 2,714 genuine
+than the English set (largest to smallest class 4.8:1, Neutral to Surprise,
+against the English set's 28.6:1, Joy to Disgust) with 2,714 genuine
 Disgust rows.
 
 It trains `emotion-ru-finetuned`, which **the shipped pipeline never
@@ -483,11 +503,11 @@ Two consequences for section 1 of this document.
 
 **The provenance defect is now fixable rather than just documented.** The
 "DeBERTa" column in every published output CSV came from EmoBERTa because the
-orchestrator overrode the path. A real DeBERTa checkpoint now exists, so
-`stage_7b_english_emotion`'s second slot can be switched from
-`emotion-en-emoberta` to `emotion-en-deberta` and the affected videos re-run.
-Until that switch is made and the videos re-run, every reported "DeBERTa" result
-is still EmoBERTa.
+orchestrator overrode the path. A real DeBERTa checkpoint now exists, and
+`stage_7b_english_emotion`'s second slot has been switched from
+`emotion-en-emoberta` to `emotion-en-deberta`. Outputs produced before the
+switch are still EmoBERTa; until the affected videos are re-run, any
+"DeBERTa" result from them must not be reported as DeBERTa.
 
 **The missing synthetic rows produced a usable finding rather than a gap.** Six
 of the seven classes trained on byte-identical data; only Disgust lost rows
@@ -502,8 +522,8 @@ That converts the honest admission in section 6 into evidence. The 9,151 rows
 cannot be inspected, but their effect can now be measured, and it was not
 flattering. It also justifies the trainer's default of no class weighting:
 weighting would reintroduce the same distortion on purpose. A
-`--class-weights balanced` run is still worth doing as the controlled
-comparison, and its result belongs in the report either way.
+`--class-weights balanced` run was still worth doing as the controlled
+comparison; it has since been done, and section 14 records the result.
 
 Across the six unchanged classes macro F1 rises from 0.8265 to 0.8418, and
 Neutral — the card's weakest class, precision 0.4438 — improves to 0.5873 with
@@ -513,8 +533,8 @@ The retrained held-out supports land within five rows of the published ones on
 every unchanged class, and exactly on sadness (18,842) and surprise (2,372).
 Two documents written months apart, with the split protocol reconstructed from
 nothing but the 15% figure, agreeing to five rows on 62,862 samples: the build
-record is sound, and so is the card's metrics table. Its *dataset* table remains
-wrong, for the reasons in sections 6 and 7.
+record is sound, and so is the card's metrics table. Its *dataset* table was
+wrong, for the reasons in sections 6 and 7, and has since been corrected.
 
 ## 11. The VA checkpoint was never lost, and its arousal output is weak
 
@@ -856,11 +876,15 @@ Per class, F1:
 |---|---|---|---|
 | anger | 0.9391 | 0.9375 | −0.0016 |
 | disgust | 0.6627 | 0.6785 | +0.0158 |
-| fear | 0.8531 | 0.8430 | −0.0101 |
-| joy | 0.9619 | 0.9619 | 0.0000 |
+| fear | 0.8531 | 0.8430 | −0.0100 |
+| joy | 0.9619 | 0.9619 | −0.0001 |
 | neutral | 0.5678 | 0.5808 | +0.0130 |
 | sadness | 0.9542 | 0.9593 | +0.0051 |
 | surprise | 0.7746 | 0.7964 | +0.0218 |
+
+Deltas are computed from the unrounded values in
+`docs/evaluation/error_analysis_report.json`, so a few differ in the last digit
+from the difference of the rounded columns.
 
 The mechanism is the expected one, and it is visible per class rather than in
 the summary. Weighting buys recall on the weak classes and pays for it in
@@ -1006,7 +1030,8 @@ it in the precision of both.
 
 Correct predictions average 18.60 words; incorrect ones 14.75. The previous
 report measured 18.56 against 15.35 on a different model, and concluded that
-short inputs are ambiguous. Two models trained differently reproduce the same
-gap to within a third of a word, which says the effect belongs to the data
+short inputs are ambiguous. Two models trained differently reproduce a gap of
+similar size, 3.86 words against 3.21, a difference of about two-thirds of a
+word, which says the effect belongs to the data
 rather than to either model. The recommendation that followed from it —
 widening context — survives; the attribution should be to the corpus.

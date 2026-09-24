@@ -85,7 +85,7 @@ else
         echo "       See training/README.md for the corpus decision and the scale mapping." >&2
         exit 2
     fi
-    OUTPUT="${OUTPUT:-${MODELS_DIR}/xlmroberta-large-va}"
+    OUTPUT="${OUTPUT:-${MODELS_DIR}/xlmroberta-base-va}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -171,6 +171,6 @@ if [[ "$OUTPUT" == *va-smoke* ]]; then
 else
     echo
     echo "If verification passed, register it: VEA_MODELS_DIR is ${MODELS_DIR}, and"
-    echo "MODEL_REGISTRY expects the directory name 'xlmroberta-large-va'."
+    echo "MODEL_REGISTRY expects the directory name 'xlmroberta-base-va'."
     echo "Then: uv run vea models"
 fi

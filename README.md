@@ -73,11 +73,15 @@ troubleshooting are in **[SETUP.md](SETUP.md)**. The short version:
 Requires [uv](https://docs.astral.sh/uv/) and Python 3.11-3.13.
 
 ```bash
-uv sync                      # runtime
-uv sync --extra train        # plus retraining dependencies
-uv sync --extra baselines    # classical baselines (imbalanced-learn, TextBlob)
-uv sync --extra xai          # interpretability (captum)
+uv sync --extra api                  # runtime plus `vea serve` (the web API)
+uv sync --extra api --extra train    # plus retraining dependencies
 ```
+
+Other extras: `baselines` (classical baselines: imbalanced-learn, TextBlob) and
+`xai` (interpretability: captum). Name every extra you want in one command —
+`uv sync` is exact, so it removes any extra you leave off, and running
+`uv sync --extra train` after `uv sync --extra api` leaves you without the API.
+A bare `uv sync` gives the pipeline and CLI with no `vea serve`.
 
 Stage 1 needs `ffmpeg` on the PATH (`apt install ffmpeg`).
 
@@ -89,7 +93,7 @@ Nothing needs configuring, because the PyPI wheel already differs per platform:
 | --- | --- |
 | Linux | a **CUDA** build — the wheel depends on `nvidia-cudnn-cu13`, `nvidia-nccl-cu13` and `triton` under `sys_platform == 'linux'` |
 | Windows | **CPU-only**; `vea config` reports `+cpu` |
-| macOS | CPU/MPS |
+| macOS | CPU/MPS, **Apple Silicon only** (see [Platforms](#platforms)) |
 
 So a Linux GPU box needs no special handling and a Windows laptop is CPU by
 construction. `uv run vea config` reports which build is actually loaded, the
@@ -123,8 +127,11 @@ export CUDA_VISIBLE_DEVICES="$(scripts/pick_free_gpu.sh)"
 Three things it handles that are easy to get wrong there:
 
 - **Caches on persistent storage.** `HF_HOME` defaults to `~/.cache`, which is
-  on the overlay. Whisper large-v3 (~3 GB) plus NLLB-3.3B (~6 GB) means
-  re-downloading ~15 GB after every restart otherwise.
+  on the overlay; the script moves it to `/workspace`. Whisper large-v3 (~3 GB)
+  goes there. NLLB-3.3B (~17 GB) does not: stage 5B caches it in
+  `models_cache/` under the directory you run from, which survives only because
+  the repo itself lives on `/workspace`. Run from the overlay and it is
+  downloaded again after every restart.
 - **GPU choice at runtime, never baked in.** `scripts/pick_free_gpu.sh` reads
   free VRAM and fails fast if nothing has room, rather than OOMing mid-run. The
   original code hardcoded GPU 5; when this project was revived, GPU 5 had
@@ -157,8 +164,9 @@ failing 20 minutes in at stage 6. To run the stages that do work:
 uv run vea run "https://www.youtube.com/watch?v=VIDEO_ID" --allow-missing-models
 ```
 
-Every stage writes into `data/video-{VIDEO_ID}/` and skips work whose output is
-already present, so an interrupted run resumes instead of restarting.
+Every stage writes into `downloads/video-{VIDEO_ID}/`, relative to the
+directory you run the command from, and skips work whose output is already
+present, so an interrupted run resumes instead of restarting.
 
 ## Web interface
 
@@ -166,7 +174,7 @@ Paste a URL, watch the nine stages live, read the timeline and the per-segment
 table. Same pipeline, same vocabulary, same colours as the PNG.
 
 ```bash
-uv run vea serve                     # API on http://127.0.0.1:8000
+uv run vea serve                     # API on http://127.0.0.1:8000 (needs --extra api)
 cd frontend && npm install && npm run dev   # UI on http://localhost:3000
 ```
 
@@ -178,13 +186,15 @@ Or in containers, which is the easier path and the one that runs on a machine
 with no GPU:
 
 ```bash
-./scripts/setup_docker.sh            # viewer + frontend, a few hundred MB
+./scripts/setup_docker.sh            # viewer + frontend
 ./scripts/setup_docker.sh --gpu      # the full pipeline instead
 ```
 
-Two images: `vea:viewer` reads finished runs and needs no torch, no CUDA and no
-ffmpeg; `vea:app` runs all nine stages. Both serve the same API, so the
-frontend does not change between them. See [docs/CONTAINER.md](docs/CONTAINER.md).
+Two images: `vea:viewer` reads finished runs; `vea:app` runs all nine stages.
+The viewer is not a light image — it installs the core dependencies, torch
+among them — but it has no ffmpeg, so a run submitted to it fails at stage 1.
+Both serve the same API, so the frontend does not change between them. See
+[docs/CONTAINER.md](docs/CONTAINER.md).
 
 **The API has no authentication.** It takes a URL from the caller and hands it
 to yt-dlp, then spends hours of compute on it. Everything binds and publishes
@@ -193,12 +203,12 @@ authenticating proxy in front.
 
 ## Configuration
 
-No paths, GPU indices or model names are hardcoded. Everything resolves through
-`src/vea/config.py`, driven by four environment variables:
+No GPU index is hardcoded, and checkpoint paths and the translation model
+resolve through `src/vea/config.py`, driven by five environment variables:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VEA_DATA_DIR` | `./data` | Per-video working directories |
+| `VEA_DATA_DIR` | `./data` | API job records (`jobs/`); runs go to `./downloads` |
 | `VEA_MODELS_DIR` | `./models` | Locally trained checkpoints |
 | `VEA_DEVICE` | `auto` | `auto`, `cpu`, `cuda`, or `cuda:N` |
 | `VEA_LOG_LEVEL` | `INFO` | Standard logging level name |
@@ -213,9 +223,15 @@ rather than quietly loading the 17 GB default.
 Models are declared once, in `MODEL_REGISTRY` in the same file. Add or swap a
 model there, not in a stage module.
 
-## Retraining the missing checkpoints
+Three things are still set in `src/vea/pipeline.py` rather than through the
+environment: the runs directory (`downloads`, in `DEFAULT_CONFIGS`), the
+Whisper size (`large-v3`, same place) and the sentence-embedding model name
+(`paraphrase-multilingual-MiniLM-L12-v2`, in `main`). Change them there.
 
-See [training/README.md](training/README.md) for the reproduction plan, dataset
+## Retraining the checkpoints
+
+Both local checkpoints are published and fetched by the scripts in `scripts/`;
+retraining is optional. See [training/README.md](training/README.md) for the reproduction plan, dataset
 sources, and what is specified versus what has to be reconstructed by
 experiment. Short version:
 
@@ -234,9 +250,10 @@ training/
 ```
 src/vea/
 ├── config.py        Settings, model registry, device and logging resolution
-├── cli.py           `vea config` / `vea models` / `vea run`
+├── cli.py           `vea config` / `vea models` / `vea run` / `vea serve`
 ├── pipeline.py      Stage orchestration and per-stage runners
-└── stages/          One module per stage, each with process_video(video_dir, config)
+├── api/             The HTTP API behind `vea serve` and the frontend
+└── stages/          One module per stage
 docs/
 ├── ARCHITECTURE.md      Stage-by-stage design notes
 ├── PROVENANCE.md        What was kept, dropped, and what the outputs really came from
@@ -261,8 +278,10 @@ decoration: each runner is there for a class of bug the others cannot see.
 - **Linux** is where the GPU server runs.
 
 `uv.lock` carries wheels for `macosx_*_arm64`, `manylinux_*_{x86_64,aarch64}`
-and `win_amd64` for both torch and CTranslate2, so there is no platform that
-simply cannot install this.
+and `win_amd64` for both torch and CTranslate2. The exception is **Intel
+macOS**: the locked torch 2.14 publishes no `macosx_*_x86_64` wheel, so a
+native install on macOS needs Apple Silicon (the torch wheel is tagged for
+macOS 14 or later). An Intel Mac can still use the containers.
 
 Two things to know when running the container off x86-64 Linux: build with
 `CUDA_RUNTIME=0`, since the CUDA 12 cuBLAS wheel is x86-64 and there is no
@@ -272,7 +291,6 @@ NVIDIA GPU to use it on, and expect CPU speeds.
 
 ```bash
 uv run pytest                  # fast tests, no GPU, no downloads
-uv run pytest -m integration   # stage-level tests (needs models)
 uv run ruff check .
 uv run ruff format .
 ```

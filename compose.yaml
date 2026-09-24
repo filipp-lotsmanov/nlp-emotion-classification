@@ -3,12 +3,14 @@
 #
 # docker compose up                  viewer + frontend. No GPU, no models,
 #                                    reads runs already in the volume. This is
-#                                    the demo, and it starts in seconds.
+#                                    the demo, and once built it starts in
+#                                    seconds.
 #
 # docker compose --profile full up -d app frontend
 #                                    the full pipeline instead of the viewer,
-#                                    on the CPU. Several GB of image, ~4 GB of
-#                                    model downloads on first run.
+#                                    on the CPU. Several GB of image, over 20 GB
+#                                    of model downloads on first run with the
+#                                    default nllb-3.3b.
 #                                    Name the services: `--profile full up` on
 #                                    its own would start the viewer as well and
 #                                    the two cannot both hold port 8000.
@@ -74,8 +76,8 @@ services:
       context: .
       target: app
       args:
-        # 0 skips the CUDA 12 cuBLAS and cuDNN wheels and the ldconfig step
-        # they need - about 1.4 GB that only stage 4 on a card ever loads.
+        # 0 skips the CUDA 12 cuBLAS wheel and the ldconfig step it needs -
+        # about 600 MB that only stage 4 on a card ever loads.
         # Leave it at 1 anywhere with a GPU; set 0 for a CPU-only laptop.
         CUDA_RUNTIME: ${CUDA_RUNTIME:-1}
     image: vea:app

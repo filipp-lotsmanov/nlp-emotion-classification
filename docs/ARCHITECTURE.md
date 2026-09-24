@@ -11,6 +11,7 @@ A modular 9-stage pipeline for analyzing emotional content in Russian YouTube vi
 - [Pipeline Stages](#pipeline-stages)
 - [Module Documentation](#module-documentation)
 - [Output Files](#output-files)
+- [Web Interface](#web-interface)
 - [Configuration](#configuration)
 - [Technical Details](#technical-details)
 - [Troubleshooting](#troubleshooting)
@@ -69,15 +70,17 @@ Stage 9: CSV Export (consolidated results)
 
 ### Design Principles
 
-**Modularity**: Each stage is independent and can be run separately. Stages validate previous outputs and fail gracefully.
+**Modularity**: Each stage lives in its own module under `src/vea/stages/` and exposes a `process_video` (or equivalent) entry point, so it can be run separately. Stages validate previous outputs and fail gracefully.
 
 **Skip Logic**: Every module checks if output already exists with matching configuration. This enables fast iteration and prevents redundant processing.
 
-**Error Isolation**: One stage failure doesn't crash the pipeline. Each stage returns clear success/failure status.
+**Error Isolation**: Each stage wrapper in `src/vea/pipeline.py` catches its own exceptions and returns a success flag. The orchestrator stops at the first failed stage from 1 to 7; a failure in stage 8 or 9 is logged and the run continues. If the NLLB translator fails to initialise, stages 5B, 6B and 7B are skipped and the Russian branch still runs.
 
 **Configuration Transparency**: All parameters are logged and saved to output files for reproducibility.
 
-**Resource Management**: Models are loaded once and reused across all videos for efficiency.
+**Resource Management**: The sentence-embedding model (stage 5A) and the NLLB translator (stage 5B) are loaded once, before stage 1, and reused. The stage 6 and 7 classifiers are loaded inside their own stage.
+
+**No import-time side effects**: Library modules only call `logging.getLogger(__name__)`; logging is configured by the CLI (`vea.config.configure_logging`). No module pins `CUDA_VISIBLE_DEVICES`. Both are enforced by `tests/test_source_hygiene.py`.
 
 ---
 
@@ -85,34 +88,43 @@ Stage 9: CSV Export (consolidated results)
 
 ### Requirements
 
-- Python 3.8+
+- Python >=3.11,<3.14 (`requires-python` in `pyproject.toml`)
+- [uv](https://docs.astral.sh/uv/) for environment management
 - CUDA-capable GPU (recommended for faster processing)
 - Ubuntu/Linux (tested on Ubuntu)
 - ~50GB disk space for models and data
 
 ### Setup
 
+Dependencies are declared in `pyproject.toml`; `uv.lock` pins the transitive set.
+
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Download required models (first run will auto-download)
-# - Whisper large-v3 (~3GB)
-# - NLLB-200-3.3B (~6GB)
-# - XLM-RoBERTa models (~1GB)
-# - Emotion classifiers (~500MB)
+uv sync                              # pipeline and CLI
+uv sync --extra api                  # plus `vea serve` (FastAPI + uvicorn)
+uv sync --extra api --extra train    # plus retraining dependencies
 ```
+
+Other extras: `baselines`, `xai`, `tensorflow` (used under `training/`). `uv sync` is exact, so any extra you leave off is removed.
+
+Two stage models are local checkpoints that are not downloaded automatically: `va-xlmroberta-large` (stages 6A/6B, directory `models/xlmroberta-base-va/`) and `emotion-en-deberta` (stage 7B, directory `models/emotion-en-deberta/`). Fetch them with:
+
+```bash
+./scripts/fetch_va_checkpoint.sh
+./scripts/fetch_emotion_en_checkpoint.sh
+uv run vea models                    # preflight: which weights are present or missing
+```
+
+Hub models download on first use:
+- Whisper large-v3 (~3GB)
+- NLLB-200-3.3B (~17GB; see `translation_model_ref` in `src/vea/config.py`)
+- Sentence embeddings, ruBERT-tiny2 and DistilRoBERTa emotion classifiers
 
 ### GPU Configuration
 
-The pipeline uses GPU 5 by default. Modify `os.environ['CUDA_VISIBLE_DEVICES']` in module files to use different GPU:
+No GPU is hardcoded. `vea.config.resolve_device()` resolves a device from `VEA_DEVICE` (`auto`, `cpu`, `cuda`, `cuda:N`; default `auto`), and `uv run vea config` shows the resolved settings and visible GPUs. An explicit value (`cpu`, `cuda`, `cuda:N`) is written into every stage config whose `device` is unset (`apply_device_setting`, called by `pipeline.main`), and into the stage 5A embedder and the stage 5B translator; `vea run` refuses to start if it names a device torch cannot see. Under `auto`, each stage chooses for itself: stages 4, 5A, 6 and 7 pick `cuda` when torch reports it available and `cpu` otherwise, and stage 5B's `select_gpu()` picks the visible GPU with the most free memory. To choose a card while keeping that behaviour, restrict what is visible:
 
-```python
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use GPU 0 instead
+```bash
+export CUDA_VISIBLE_DEVICES="$(scripts/pick_free_gpu.sh)"   # GPU with the most free memory
 ```
 
 ---
@@ -123,18 +135,22 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Use GPU 0 instead
 
 ```bash
 # Process a single video
-python main.py "https://www.youtube.com/watch?v=VIDEO_ID"
+uv run vea run "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
+
+The `vea` command is defined in `src/vea/cli.py`; `vea run` calls `main` in `src/vea/pipeline.py`. Before importing the pipeline it refuses to start if a checkpoint a stage needs is missing (override with `--allow-missing-models`, in which case the dependent stages fail) or if the URL is not a YouTube URL it can parse. `--log-level` overrides `VEA_LOG_LEVEL`.
+
+Other subcommands: `vea config` (resolved settings and devices), `vea models` (checkpoint preflight), `vea serve` (HTTP API, see [Web Interface](#web-interface)).
 
 ### Example
 
 ```bash
-python main.py "https://www.youtube.com/watch?v=mqGSkDFeLEo"
+uv run vea run "https://www.youtube.com/watch?v=mqGSkDFeLEo"
 ```
 
 ### Output Location
 
-All files are saved to `downloads/video-{VIDEO_ID}/`:
+All files are saved to `downloads/video-{VIDEO_ID}/`, relative to the working directory (`base_output` in the stage 1 config):
 - Metadata, audio, video files
 - Scene boundaries, transcriptions
 - Intensity and emotion predictions
@@ -146,7 +162,7 @@ All files are saved to `downloads/video-{VIDEO_ID}/`:
 
 ### Stage 1: YouTube Download
 
-**Module**: `download_module.py`
+**Module**: `src/vea/stages/download.py`
 
 Downloads video and audio streams from YouTube using yt-dlp.
 
@@ -171,7 +187,7 @@ Downloads video and audio streams from YouTube using yt-dlp.
 
 ### Stage 2: Scene Detection
 
-**Module**: `scene_detector_module.py`
+**Module**: `src/vea/stages/scenes.py`
 
 Detects visual scene boundaries using PySceneDetect with adaptive thresholding.
 
@@ -199,7 +215,7 @@ Detects visual scene boundaries using PySceneDetect with adaptive thresholding.
 
 ### Stage 3: Audio Preprocessing
 
-**Module**: `audio_preprocess_module.py`
+**Module**: `src/vea/stages/audio.py`
 
 Normalizes audio levels and optionally reduces background noise.
 
@@ -223,7 +239,7 @@ Normalizes audio levels and optionally reduces background noise.
 
 ### Stage 4: Speech Transcription
 
-**Module**: `transcribe_module.py`
+**Module**: `src/vea/stages/transcribe.py`
 
 Transcribes Russian speech using faster-whisper (CTranslate2 implementation of OpenAI Whisper).
 
@@ -235,7 +251,7 @@ Transcribes Russian speech using faster-whisper (CTranslate2 implementation of O
 - Quality monitoring and hallucination detection
 
 **Output:**
-- `transcription_{model}_{duration}.json` - Transcription with word timestamps
+- `transcription_{model}.json` - Transcription with word timestamps (`transcription_large-v3.json` for a full run with the defaults). When `duration_limit` is a number of seconds N, the name gets an `_{N}s` suffix, e.g. `transcription_large-v3_300s.json` (`generate_transcription_filename`).
 
 **Critical Anti-Hallucination Strategy:**
 1. `vad_filter=True` - Removes silence where hallucinations occur
@@ -248,7 +264,8 @@ Transcribes Russian speech using faster-whisper (CTranslate2 implementation of O
 - Large-v3 model provides best accuracy for Russian
 - Word timestamps critical for downstream alignment
 - Compression ratio and no_speech_prob detect hallucinations
-- VAD parameters tuned for speech preservation over aggressive filtering
+- VAD parameters tuned for speech preservation over aggressive filtering (`min_silence_duration_ms=2000`, `speech_pad_ms=400`, `threshold=0.5`, set in `transcribe_audio`)
+- On CPU, `compute_type="float16"` is replaced with `int8` automatically
 
 **Why faster-whisper over openai-whisper:**
 - Same accuracy, 2-4x faster inference
@@ -260,12 +277,12 @@ Transcribes Russian speech using faster-whisper (CTranslate2 implementation of O
 
 ### Stage 5A: Scene Alignment
 
-**Module**: `scene_align_module.py`
+**Module**: `src/vea/stages/align.py`
 
 Creates hierarchical scene structure using semantic embeddings.
 
 **Features:**
-- **Global scenes**: 10-15 min semantic units for visualization structure
+- **Global scenes**: Large units of up to 15 min for visualization structure (split on the duration cap or on a 5s silence gap)
 - **Local segments**: 8-60 word coherent ideas for emotion classification
 - Semantic similarity using multilingual sentence embeddings
 - Word-count constraints to ensure sufficient context
@@ -273,7 +290,7 @@ Creates hierarchical scene structure using semantic embeddings.
 
 **Output:**
 - `global_scenes.json` - High-level scene structure
-- `local_segments_{transcription}.json` - Emotion-ready segments
+- `local_segments_{transcription}.json` - Emotion-ready segments, e.g. `local_segments_transcription_large-v3.json`. When several transcriptions exist, `find_best_transcription` prefers a full (not time-limited) one, then the most recent, then the larger model.
 
 **Design Rationale:**
 - **Two-level hierarchy**: Global for structure, local for classification
@@ -289,22 +306,23 @@ Creates hierarchical scene structure using semantic embeddings.
 
 **Technical Details:**
 - Uses `paraphrase-multilingual-MiniLM-L12-v2` for Russian embeddings
-- Similarity threshold (0.35-0.4) balances coherence with granularity
+- Similarity threshold (`min_similarity_threshold`, default 0.35) balances coherence with granularity
+- Segment size: minimum 8, target 25, maximum 60 words, at most 5 sentences
 - Fallback to word overlap if embeddings unavailable
-- Aggregates 300+ camera shots into 30-50 semantic scenes per hour
+- Design goal (`group_shots_into_global_scenes`): reduce ~300 camera shots per hour to 10-30 global scenes
 
 ---
 
 ### Stage 5B: Translation
 
-**Module**: `translate_module.py`
+**Module**: `src/vea/stages/translate.py`
 
 Translates Russian segments to English using NLLB (No Language Left Behind).
 
 **Features:**
-- NLLB-200-3.3B model for high-quality translation
+- NLLB-200-3.3B model by default; `VEA_TRANSLATION_MODEL` selects `nllb-3.3b`, `nllb-1.3b` or `nllb-600m` (`TRANSLATION_MODELS` in `src/vea/config.py`)
 - Batch processing for efficiency
-- Automatic GPU memory management
+- Automatic GPU memory management: `select_gpu()` picks the visible GPU with the most free memory, and the batch size halves on out-of-memory
 - Preserves segment structure and metadata
 
 **Output:**
@@ -312,15 +330,16 @@ Translates Russian segments to English using NLLB (No Language Left Behind).
 
 **Design Notes:**
 - NLLB chosen for multilingual quality (better than M2M-100)
-- 3.3B parameter model balances quality and speed
+- 3.3B parameter model balances quality and speed; it is roughly 17 GB of weights and wants about 8 GB of VRAM
 - Beam search (num_beams=4) improves translation quality
+- NLLB-200 is licensed CC-BY-NC-4.0 (non-commercial); see `docs/LICENSING.md`
 - Enables cross-language emotion validation
 
 ---
 
 ### Stage 6A: Russian Intensity Classification
 
-**Module**: `intensity_classifier_ru.py`
+**Module**: `src/vea/stages/intensity_ru.py`
 
 Predicts arousal and valence for Russian text using XLM-RoBERTa.
 
@@ -331,7 +350,7 @@ Predicts arousal and valence for Russian text using XLM-RoBERTa.
 - Binary emotion significance flag for downstream filtering
 
 **Output:**
-- `arousal_{model}_local_{transcription}.json` - Arousal-valence predictions
+- `arousal_{model}_local_{transcription}.json` - Arousal-valence predictions, e.g. `arousal_xlmroberta-large_local_transcription_large-v3.json` (`{model}` is the stage config's `name`, which still says `xlmroberta-large`; see below)
 
 **Design Rationale:**
 - **Continuous values**: Preserves all information (no arbitrary discretization)
@@ -346,16 +365,18 @@ Predicts arousal and valence for Russian text using XLM-RoBERTa.
 - Current approach: Research-backed, preserves data
 
 **Technical Details:**
-- XLM-RoBERTa large (560M parameters)
-- Trained on valence-arousal datasets
-- Works with Russian, English, and 100+ languages
+- Registry key `va-xlmroberta-large`, loaded from the local checkpoint directory `xlmroberta-base-va`. Despite the key name this is the **base-size** XLM-RoBERTa checkpoint published by Mendes & Martins (gmendes9/multilingual_va_prediction); their large checkpoint exceeds GitHub's release-asset limit. The key keeps the archive's name (see the comment in `src/vea/config.py`)
+- Trained on 34 psycho-linguistic valence-arousal datasets across 100 languages, so it reads Russian without translation
+- Fetched and checksum-verified by `scripts/fetch_va_checkpoint.sh`
+- Its arousal output separates this project's classes at AUC 0.5734; read `docs/PROVENANCE.md` section 11 before reporting anything derived from it
+- Threshold methods: `median` (default), `mean`, `percentile_60`, `mad` (`calculate_emotion_threshold`)
 - Batch processing for GPU efficiency
 
 ---
 
 ### Stage 6B: English Intensity Classification
 
-**Module**: `intensity_classifier_en.py`
+**Module**: `src/vea/stages/intensity_en.py`
 
 Predicts arousal and valence for English translations.
 
@@ -376,18 +397,18 @@ Predicts arousal and valence for English translations.
 
 ### Stage 7A: Russian Emotion Classification
 
-**Module**: `emotion_classifier_ru.py`
+**Module**: `src/vea/stages/emotion_ru.py`
 
 Classifies emotions in Russian segments using ruBERT.
 
 **Features:**
-- 7-class emotion model (anger, fear, joy, love, neutral, sadness, surprise)
+- 7 emotion classes, `EMOTION_CLASSES` in `src/vea/config.py`: anger, disgust, fear, joy, neutral, sadness, surprise. Model labels are mapped onto them by `canonicalize_emotion` (the Russian model emits `enthusiasm`, which maps to joy); an unrecognised label raises rather than defaulting to neutral
 - Only processes emotionally significant segments (from Stage 6A)
 - Fast inference with small model (rubert-tiny2)
 - Assigns neutral to low-arousal segments without inference
 
 **Output:**
-- `emotion_{model}_local_{transcription}.json` - Russian emotion predictions
+- `emotion_{model}_local_{transcription}.json` - Russian emotion predictions, e.g. `emotion_rubert-tiny2_local_transcription_large-v3.json`
 
 **Design Rationale:**
 - **Two-stage approach**: Intensity filtering → emotion classification
@@ -396,33 +417,33 @@ Classifies emotions in Russian segments using ruBERT.
 - **Native Russian**: Better accuracy than translated text
 
 **Technical Details:**
-- ruBERT-tiny2: 29M parameters, fast inference
-- Trained on Russian emotion datasets
-- 7 super-emotion categories from academic literature
+- `Djacon/rubert-tiny2-russian-emotion-detection` (registry key `emotion-ru-rubert-tiny2`), a third-party Hub model used as-is; small model, fast inference
+- The group's own Russian model (`emotion-ru-finetuned`) is declared in the registry for provenance but not wired in
 - Confidence scores and quality metrics
 
 ---
 
 ### Stage 7B: English Emotion Classification
 
-**Module**: `emotion_classifier_en.py`
+**Module**: `src/vea/stages/emotion_en.py`
 
 Classifies emotions in English translations using two models.
 
 **Features:**
 - **Dual-model ensemble**: DistilRoBERTa + DeBERTa for validation
 - Only processes emotionally significant segments (from Stage 6B)
-- 7-class emotion model matching Russian categories
-- Native English processing (no translation artifacts)
+- Same 7 classes as the Russian branch (`EMOTION_CLASSES`)
+- English-language models applied to the NLLB translations, so translation errors carry into this branch
 
 **Output:**
 - `emotion_distilroberta_en_local_{transcription}.json`
-- `emotion_deberta_en_local_{transcription}.json`
+- `emotion_deberta-finetuned_en_local_{transcription}.json`
 
 **Design Notes:**
 - Two models enable ensemble validation
-- DistilRoBERTa: Fast, efficient (82M parameters)
-- DeBERTa: More accurate (larger model)
+- DistilRoBERTa: `j-hartmann/emotion-english-distilroberta-base`, fast, efficient (~82M parameters), fed raw text
+- DeBERTa: `microsoft/deberta-v3-base` (~183M parameters) retrained for this project on the cleaned super-emotion set, loaded from the local checkpoint `emotion-en-deberta` (`scripts/fetch_emotion_en_checkpoint.sh`). Its inputs go through the `super_emotion_v1` text cleaner (`vea.text_clean`) because its training data did; DistilRoBERTa's do not
+- The `deberta-finetuned` label in the filename predates this checkpoint: outputs generated before the switch came from `tae898/emoberta-large` and must be regenerated before they are reported (`docs/PROVENANCE.md` sections 1 and 10)
 - Enables cross-language emotion comparison
 
 **Why Two English Models:**
@@ -435,7 +456,7 @@ Classifies emotions in English translations using two models.
 
 ### Stage 8: Visualization
 
-**Module**: `visualization.py`
+**Module**: `src/vea/stages/visualize.py`
 
 Creates emotion timeline visualization with ensemble validation.
 
@@ -467,27 +488,37 @@ Creates emotion timeline visualization with ensemble validation.
 
 ### Stage 9: CSV Export
 
-**Module**: `csv_generator.py`
+**Module**: `src/vea/stages/export.py`
 
 Consolidates all pipeline results into a single CSV for analysis.
 
 **Features:**
 - One row per segment
 - Combines transcription, translation, VA, and emotions
-- Ensemble emotion calculation with agreement levels
+- Ensemble emotion calculation with agreement levels (`calculate_final_emotion`)
 - Handles missing data gracefully
 
 **Output:**
 - `emotion_analysis_data.csv` - Consolidated results
 
-**CSV Columns:**
+**CSV Columns** (in this order, as written by `create_emotion_csv`):
 - Segment metadata: `segment_id`, `start_time`, `end_time`, `duration`
 - Text: `text_ru`, `text_en`
 - Russian VA: `ru_arousal`, `ru_valence`
 - English VA: `en_arousal`, `en_valence`
-- Russian emotion: `emotion_ru`, `confidence_ru`
-- English emotion: `emotion_en_distil`, `emotion_en_deberta`
+- Russian emotion: `emotion_ru`, `emotion_ru_confidence`
+- English emotion: `emotion_en_distil`, `emotion_en_distil_confidence`, `emotion_en_deberta`, `emotion_en_deberta_confidence`
 - Ensemble: `emotion_final`, `emotion_agreement`
+
+Emotion cells hold display names (`EMOTION_DISPLAY_NAMES`: `Anger`, `Disgust`, `Fear`, `Happiness`, `Neutral`, `Sadness`, `Surprise`; joy is written as `Happiness`).
+
+`emotion_agreement` is one of:
+- `full` - all available models agree (at least two)
+- `majority` - two of three agree
+- `confidence` - all disagree; the highest-confidence prediction is used
+- `single` - only one model produced a prediction
+
+(`no_data` is returned when no model produced a prediction for the segment.)
 
 **Usage Examples:**
 ```python
@@ -497,7 +528,7 @@ import pandas as pd
 df = pd.read_csv("downloads/video-ID/emotion_analysis_data.csv")
 
 # Filter high-confidence predictions
-confident = df[df["emotion_agreement"] == "full_agreement"]
+confident = df[df["emotion_agreement"] == "full"]
 
 # Analyze emotion distribution
 df["emotion_final"].value_counts()
@@ -512,44 +543,58 @@ disagreements = df[df["emotion_ru"] != df["emotion_en_distil"]]
 
 ### Core Modules
 
-#### `main.py`
-Pipeline orchestrator that runs all 9 stages sequentially. Loads models once, validates each stage output, and handles errors gracefully.
+All paths are relative to the repository root; the package is `vea` (`src/vea/`).
 
-#### `download_module.py`
+#### `src/vea/cli.py`
+The `vea` command (`[project.scripts]` in `pyproject.toml`): `run`, `config`, `models`, `serve`. `config` and `models` do not import the pipeline, so they work without torch installed.
+
+#### `src/vea/pipeline.py`
+Pipeline orchestrator (`main(youtube_url, configs=None)`) that runs all 9 stages sequentially, plus `DEFAULT_CONFIGS` and one `run_stage_*` wrapper per stage. Loads the shared models once, validates each stage output, and handles errors gracefully.
+
+#### `src/vea/config.py`
+Runtime settings from `VEA_*` environment variables (`Settings`, `get_settings`), the model registry (`MODEL_REGISTRY`, `resolve_model`, `missing_checkpoints`), `resolve_device`, `apply_device_setting`, `configure_logging`, and the emotion vocabulary (`EMOTION_CLASSES`, `EMOTION_ALIASES`, `canonicalize_emotion`). Imports neither torch nor transformers at module level.
+
+#### `src/vea/text_clean.py`
+The `super_emotion_v1` text cleaner applied to the DeBERTa member's inputs in stage 7B.
+
+#### `src/vea/stages/download.py`
 YouTube downloader using yt-dlp with format fallback and metadata extraction.
 
-#### `scene_detector_module.py`
+#### `src/vea/stages/scenes.py`
 Scene boundary detection using PySceneDetect with adaptive thresholding.
 
-#### `audio_preprocess_module.py`
+#### `src/vea/stages/audio.py`
 Audio normalization and optional noise reduction.
 
-#### `transcribe_module.py`
+#### `src/vea/stages/transcribe.py`
 Russian speech transcription using faster-whisper with anti-hallucination measures.
 
-#### `scene_align_module.py`
+#### `src/vea/stages/align.py`
 Hierarchical scene segmentation using semantic embeddings.
 
-#### `translate_module.py`
-Russian to English translation using NLLB.
+#### `src/vea/stages/translate.py`
+Russian to English translation using NLLB (`NLLBTranslator`).
 
-#### `intensity_classifier_ru.py`
+#### `src/vea/stages/intensity_ru.py`
 Russian arousal-valence prediction using XLM-RoBERTa.
 
-#### `intensity_classifier_en.py`
+#### `src/vea/stages/intensity_en.py`
 English arousal-valence prediction using XLM-RoBERTa.
 
-#### `emotion_classifier_ru.py`
+#### `src/vea/stages/emotion_ru.py`
 Russian emotion classification using ruBERT.
 
-#### `emotion_classifier_en.py`
+#### `src/vea/stages/emotion_en.py`
 English emotion classification using DistilRoBERTa and DeBERTa.
 
-#### `visualization.py`
+#### `src/vea/stages/visualize.py`
 Emotion timeline visualization with ensemble validation.
 
-#### `csv_generator.py`
+#### `src/vea/stages/export.py`
 CSV export consolidating all pipeline results.
+
+#### `src/vea/api/`
+The HTTP API behind `vea serve` (`app.py` routes, `jobs.py` job queue, `runs.py` reading finished runs). See [Web Interface](#web-interface).
 
 ---
 
@@ -560,13 +605,13 @@ CSV export consolidating all pipeline results.
 ```
 downloads/
 └── video-{VIDEO_ID}/
-    ├── video.mp4                                    # Downloaded video
+    ├── video.{ext}                                  # Downloaded video (mp4/webm)
     ├── audio.wav                                    # Original audio
     ├── metadata.json                                # Video metadata
     ├── preprocessed_audio.wav                       # Normalized audio
     ├── audio_quality.json                           # Quality metrics
     ├── scene_boundaries.json                        # Scene detection
-    ├── transcription_large-v3_full.json            # Transcription
+    ├── transcription_large-v3.json                  # Transcription (full run)
     ├── global_scenes.json                           # Global scenes
     ├── local_segments_transcription_large-v3.json  # Russian segments
     ├── local_segments_*_translated.json            # English segments
@@ -574,10 +619,12 @@ downloads/
     ├── arousal_xlmroberta-large_en_local_*.json    # English VA
     ├── emotion_rubert-tiny2_local_*.json           # Russian emotion
     ├── emotion_distilroberta_en_local_*.json       # English emotion 1
-    ├── emotion_deberta_en_local_*.json             # English emotion 2
+    ├── emotion_deberta-finetuned_en_local_*.json   # English emotion 2
     ├── emotion_timeline.png                         # Visualization
     └── emotion_analysis_data.csv                    # Final results
 ```
+
+A time-limited run writes `transcription_large-v3_{N}s.json` instead, and every downstream name carries that base (e.g. `local_segments_transcription_large-v3_{N}s.json`).
 
 ### Key File Formats
 
@@ -588,42 +635,100 @@ All JSON files follow consistent schemas:
 
 ---
 
+## Web Interface
+
+A browser front end ships with the pipeline: a FastAPI service in `src/vea/api/` started by `vea serve`, and a Next.js app in `frontend/`.
+
+```bash
+uv sync --extra api
+uv run vea serve                              # API on http://127.0.0.1:8000
+cd frontend && npm install && npm run dev     # UI on http://localhost:3000
+```
+
+- `POST /api/jobs` with `{"url": ...}` queues a run. Jobs run one at a time in submission order; each is a subprocess executing `python -m vea.cli run <url>`, so it goes through the same preflight checks as the CLI. `GET /api/jobs/{id}/events` streams job state and log lines (SSE); `DELETE /api/jobs/{id}` cancels.
+- `GET /api/runs`, `/api/runs/{video_id}`, `/api/runs/{video_id}/segments` and `/api/runs/{video_id}/timeline` read finished runs from `downloads/` (`vea serve --downloads` changes the directory). Emotion labels are canonicalised through `vea.config` before they leave the API.
+- `GET /api/meta` and `GET /api/health` report the stage list, emotion vocabulary and whether checkpoints are present.
+
+The API has no authentication and fetches caller-supplied URLs; it binds to `127.0.0.1` by default and must not be exposed. The full route list is in the `src/vea/api/app.py` docstring.
+
+---
+
 ## Configuration
 
 ### Default Configuration
 
-The pipeline uses optimized defaults in `main.py`. Key parameters:
+The pipeline uses optimized defaults in `DEFAULT_CONFIGS` in `src/vea/pipeline.py`. Key parameters (excerpt):
 
 ```python
 DEFAULT_CONFIGS = {
     "stage_4_transcription": {
         "model_size": "large-v3",
         "language": "ru",
+        "duration_limit": "full",
+        "device": None,
         "compute_type": "float16",
     },
     "stage_5a_scene_alignment": {
+        "max_global_scene_duration": 900.0,
+        "min_gap_for_global_split": 5.0,
         "min_words_per_segment": 8,
-        "target_words_per_segment": 16,
-        "min_similarity_threshold": 0.4,
+        "target_words_per_segment": 25,
+        "max_words_per_segment": 60,
+        "max_sentences_per_segment": 5,
+        "min_similarity_threshold": 0.35,
+        "force_reprocess": False,
     },
-    "stage_6a_russian_intensity": {"threshold_method": "median", "batch_size": 32},
+    "stage_5b_translation": {
+        "model_name": translation_model_ref(),  # from VEA_TRANSLATION_MODEL
+        "num_beams": 4,
+        "batch_size": 32,
+        ...
+    },
+    "stage_6a_russian_intensity": {
+        "name": "xlmroberta-large",
+        "model": "va-xlmroberta-large",  # key in vea.config.MODEL_REGISTRY
+        "config": {"batch_size": 32, "device": None,
+                   "skip_advertisements": True, "threshold_method": "median"},
+        ...
+    },
+    ...
 }
 ```
+
+Stages 6 and 7 name models by their `MODEL_REGISTRY` key rather than by path; `_resolve_stage_model` turns the key into a loadable path when the stage starts, so a missing checkpoint fails that stage with a named error. `stage_5b_translation.model_name` is evaluated when `vea.pipeline` is imported, so `VEA_TRANSLATION_MODEL` must be set before that.
+
+### Environment Variables
+
+Read by `Settings.from_env` in `src/vea/config.py`; `uv run vea config` prints the resolved values.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `VEA_MODELS_DIR` | `models/` | where local checkpoints are looked up |
+| `VEA_DATA_DIR` | `data/` | holds the API's job store (`$VEA_DATA_DIR/jobs`); pipeline output still goes to `downloads/` |
+| `VEA_DEVICE` | `auto` | `auto`, `cpu`, `cuda`, `cuda:N`; see [GPU Configuration](#gpu-configuration) for what each does |
+| `VEA_LOG_LEVEL` | `INFO` | logging level |
+| `VEA_TRANSLATION_MODEL` | `nllb-3.3b` | `nllb-3.3b`, `nllb-1.3b` or `nllb-600m` |
 
 ### Custom Configuration
 
-Modify configurations in `main.py` or pass custom config dict:
+`main(youtube_url, configs=None)` uses `configs` as given; it does **not** merge a partial dict with the defaults, so every stage key must be present. Start from a deep copy of the defaults and change what you need:
 
 ```python
-custom_config = {
-    "stage_4_transcription": {
-        "model_size": "medium",  # Faster, less accurate
-        "duration_limit": 300,  # Process first 5 minutes only
-    }
-}
+import copy
 
-main(youtube_url, configs=custom_config)
+from vea.config import configure_logging
+from vea.pipeline import DEFAULT_CONFIGS, main
+
+configure_logging("INFO")  # the CLI does this for you; library code does not
+
+configs = copy.deepcopy(DEFAULT_CONFIGS)
+configs["stage_4_transcription"]["model_size"] = "medium"  # Faster, less accurate
+configs["stage_4_transcription"]["duration_limit"] = 300  # First 5 minutes only
+
+ok = main(youtube_url, configs=configs)  # True on success
 ```
+
+This bypasses the checkpoint and URL checks that `vea run` performs. Use `copy.deepcopy`: the stage dicts are nested, so a shallow copy would modify `DEFAULT_CONFIGS` itself.
 
 ---
 
@@ -661,12 +766,14 @@ Approximate times for 1-hour video on RTX 6000 Ada:
 
 ### Model Storage
 
-Models are cached in default locations:
-- Whisper: `~/.cache/whisper/`
-- Transformers: `~/.cache/huggingface/`
-- Sentence transformers: `~/.cache/torch/sentence_transformers/`
+Where each model is stored, as far as the code determines it:
+- Whisper (stage 4): `WhisperModel(model_size, ...)` is called without `download_root`, so faster-whisper downloads the model through the Hugging Face Hub cache (`HF_HOME`, default under `~/.cache/huggingface/`)
+- NLLB (stage 5B): `NLLBTranslator` passes `cache_dir="./models_cache"`, so the translator is cached in `models_cache/` under the working directory, not in `HF_HOME`
+- Hub classifiers (stages 7A, 7B DistilRoBERTa): `from_pretrained` without `cache_dir`, i.e. the Hugging Face cache
+- Sentence transformers (stage 5A): `SentenceTransformer(model_name)` without `cache_folder`, i.e. the library's default cache
+- Local checkpoints (stages 6A/6B, 7B DeBERTa): `VEA_MODELS_DIR` (default `models/`), directories `xlmroberta-base-va/` and `emotion-en-deberta/`
 
-Total storage: ~15GB for all models
+Total storage: NLLB-200-3.3B alone is roughly 17 GB and Whisper large-v3 about 3 GB, so plan for more than 20 GB of model weights with the default translator. `VEA_TRANSLATION_MODEL=nllb-600m` reduces the translator to about 2.5 GB.
 
 ---
 
@@ -676,34 +783,41 @@ Total storage: ~15GB for all models
 
 **Issue: Whisper hallucinations (repetitive text)**
 - Solution: Already implemented VAD filtering and `condition_on_previous_text=False`
-- If still occurring: Increase VAD threshold or use shorter duration_limit
+- If still occurring: Adjust the VAD parameters in `transcribe_audio` (`src/vea/stages/transcribe.py`; they are not exposed in the stage config) or use a shorter `duration_limit`
+
+**Issue: `vea run` refuses to start ("checkpoints that a stage needs are missing")**
+- Solution: Run `uv run vea models`, then fetch the missing weights with `scripts/fetch_va_checkpoint.sh` / `scripts/fetch_emotion_en_checkpoint.sh`
+- Or set `VEA_MODELS_DIR` if the checkpoints live elsewhere
 
 **Issue: CUDA out of memory**
 - Solution: Reduce batch sizes in configs
 - Stage 4: Use `compute_type='int8'` instead of `float16`
-- Stages 6-7: Reduce `batch_size` to 16 or 8
+- Stages 6-7: Reduce `batch_size` (under each stage's `config`) to 16 or 8
+- Pick a less busy card: `export CUDA_VISIBLE_DEVICES="$(scripts/pick_free_gpu.sh)"`
 
 **Issue: Missing translations (Stage 5B fails)**
 - Solution: Check GPU memory and NLLB model download
-- Try smaller NLLB model: `facebook/nllb-200-1.3B`
+- Try a smaller NLLB model: `VEA_TRANSLATION_MODEL=nllb-1.3b` or `nllb-600m`
 
 **Issue: Low emotion prediction quality**
 - Check: Are intensity thresholds appropriate?
-- Solution: Adjust `threshold_method` in Stage 6 config
+- Solution: Adjust `threshold_method` in Stage 6 config (`median`, `mean`, `percentile_60`, `mad`)
 - Review: CSV export to analyze confidence scores
 
 **Issue: Slow processing**
-- Solution: Use GPU (check `CUDA_VISIBLE_DEVICES`)
-- Reduce model sizes: medium Whisper, base XLM-RoBERTa
+- Solution: Use GPU (`uv run vea config` shows whether torch sees CUDA; check `CUDA_VISIBLE_DEVICES`)
+- Reduce model sizes: medium Whisper, a smaller NLLB via `VEA_TRANSLATION_MODEL`
 - Process shorter videos or use `duration_limit`
 
 ### Logging
 
-All modules use Python logging. Increase verbosity:
+All modules log through `logging.getLogger(__name__)`; only the entry point configures handlers. Increase verbosity:
 
-```python
-logging.basicConfig(level=logging.DEBUG)
+```bash
+uv run vea run "<url>" --log-level DEBUG     # or: export VEA_LOG_LEVEL=DEBUG
 ```
+
+From Python, call `vea.config.configure_logging("DEBUG")` before `main`.
 
 ### Validation
 
@@ -711,7 +825,7 @@ Each module includes validation functions. Check for errors:
 
 ```python
 # Validate transcription
-from transcribe_module import validate_transcription
+from vea.stages.transcribe import validate_transcription
 
 result = validate_transcription(transcription_data)
 print(result)  # List of validation errors
@@ -728,7 +842,8 @@ print(result)  # List of validation errors
 3. **Temporal smoothing**: Reduce emotion jitter in timeline
 4. **Multi-language support**: Extend beyond Russian
 5. **Real-time processing**: Streaming pipeline for live content
-6. **Web interface**: User-friendly UI for video upload and analysis
+
+The web interface that used to be listed here has shipped; see [Web Interface](#web-interface).
 
 ### Research Opportunities
 
@@ -781,5 +896,6 @@ dataset license (super-emotion dataset).
 
 ### Components and Their Licenses
 
-- Pipeline Code: MIT License (but models/data are CC BY-SA 4.0)
+- Pipeline Code: covered by the repository licence, CC BY-SA 4.0 (`LICENSE`); it could be MIT on its own only if no CC BY-SA 4.0 data or weights shipped with it (see `docs/LICENSING.md`)
 - Trained Models: CC BY-SA 4.0 (derived from super-emotion dataset)
+- NLLB-200 (stage 5B): CC-BY-NC-4.0, non-commercial; see `docs/LICENSING.md`

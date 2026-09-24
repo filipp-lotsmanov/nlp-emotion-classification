@@ -8,10 +8,10 @@ read a timeline. So the project ships as two images rather than one.
 |---|---|---|
 | base | `python:3.11-slim` | same, plus ffmpeg |
 | extras installed | `api` | `api`, `train` |
-| torch / CUDA | no | yes, plus a CUDA 12 cuBLAS and cuDNN for CTranslate2 |
-| can run stages 1–9 | no | yes |
+| torch / CUDA | torch, a core dependency, with the CUDA libraries its Linux wheel brings | the same, plus a CUDA 12 cuBLAS for CTranslate2 |
+| can run stages 1–9 | no — no ffmpeg, so stage 1 fails | yes |
 | can read finished runs | yes | yes |
-| approximate size | a few hundred MB | several GB |
+| approximate size | several GB (torch) | larger again |
 | needs a GPU | no | no — but attach one only via `compose.gpu.yaml`, and a CPU run is roughly ten times slower |
 
 Both expose the same API on port 8000, so the frontend does not know or care
@@ -71,8 +71,8 @@ it passes.
 
 ### Building without CUDA
 
-`CUDA_RUNTIME=0` skips the CUDA 12 cuBLAS and cuDNN wheels and the `ldconfig`
-step that follows them — about 1.4 GB that only stage 4 on a card ever loads:
+`CUDA_RUNTIME=0` skips the CUDA 12 cuBLAS wheel and the `ldconfig` step that
+follows it — about 600 MB that only stage 4 on a card ever loads:
 
 ```bash
 CUDA_RUNTIME=0 docker compose --profile full build app
@@ -159,20 +159,25 @@ One volume, `vea_vea-data`, mounted at `/data`:
 
 ```
 /data/downloads/video-<id>/   per-run artefacts, including the stage 9 CSV
-/data/models/                 HuggingFace cache; roughly 4 GB after a first run
+/data/models/                 HuggingFace cache and the two local checkpoints;
+                              over 20 GB after a first run with the default
+                              nllb-3.3b (~17 GB of it), about 6 GB with nllb-600m
 /data/jobs/<job-id>.json      one file per job
 /data/jobs/<job-id>.log       its full stdout
 /data/cache/                  matplotlib and friends
 ```
 
 Inside the image, `/app/downloads` and `/app/models` are symlinks into `/data`,
-because those are the paths the CLI's own defaults use. Rebuilding an image
-therefore never costs you the model cache.
+because those are the paths the CLI's own defaults use. `/app/models_cache`,
+where stage 5B caches NLLB relative to its working directory, links to
+`/data/models` as well. Rebuilding an image or recreating a container therefore
+never costs you the model cache.
 
 Jobs are files, which is the reason a run survives a restart of the API, a
 closed browser, and a `docker compose down`. On start the store re-reads the
-directory and marks as failed anything that was running when the process died,
-rather than leaving a job that claims to be running with no process behind it.
+directory and marks as failed anything that was running or still queued when
+the process died, rather than leaving a job that claims to be running with no
+process behind it.
 
 To throw the state away:
 
@@ -186,7 +191,7 @@ docker volume rm vea_vea-data
 Stage 4 (transcription) runs on faster-whisper, which runs on CTranslate2,
 whose wheels are built against CUDA 12: at runtime they load `libcublas.so.12`
 and `libcudnn.so.9` **by name**. torch now resolves to a CUDA 13 build and
-brings `nvidia-cublas-cu13`, which provides `libcublas.so.13`. Same library,
+brings `nvidia-cublas`, which provides `libcublas.so.13`. Same library,
 different soname, so the loader finds nothing usable and stage 4 dies with:
 
 ```
@@ -237,7 +242,7 @@ the container, not only the ones started through a wrapper that remembered to
 set it. The build then asserts both sonames are in the cache, so the image
 fails to build rather than failing at stage 4 an hour into a run.
 
-This costs about 1.4 GB. The alternative, pinning torch to a cu12 index, would
+This costs about 600 MB. The alternative, pinning torch to a cu12 index, would
 change `uv.lock` for every environment including the server where the current
 pin is already proven. See `docs/PROVENANCE.md` section 12.
 
@@ -259,7 +264,7 @@ denylist would start shipping whatever gets added to the repository next.
 
 ## Frontend
 
-Next.js 15, App Router, built with `output: "standalone"`, so the runtime image
+Next.js 16, App Router, built with `output: "standalone"`, so the runtime image
 carries the server and the traced dependencies rather than the whole of
 `node_modules`. No CSS framework: five pages did not justify one.
 
@@ -292,10 +297,12 @@ start: checkpoints ... are missing", "libcudnn.so.9: cannot open shared object
 file".
 
 Motion marks change and nothing else — a stage becoming active, a bar reaching
-its value, rows arriving. Durations are 140–420 ms on one easing curve, the
-in-progress bar carries a slow sheen so a stage that holds for an hour does not
-look like a stalled one, and everything is disabled under
-`prefers-reduced-motion`, delays included.
+its value, rows arriving. Transitions are 140–420 ms on one easing curve; the
+headline count-up (0.9 s) and the fade on a row picked from the timeline
+(2.2 s) are the deliberate exceptions. The in-progress bar carries a slow sheen
+so a stage that holds for an hour does not look like a stalled one, and under
+`prefers-reduced-motion` everything is disabled, delays included, except a
+short transition on the progress bar's width.
 
 `NEXT_PUBLIC_API_URL` is read **by the browser**, not by the Next server. It
 has to be an address you can reach — `http://127.0.0.1:8000` — not the compose
@@ -333,12 +340,23 @@ systemctl restart docker`. Confirm with
 
 **The submit form is disabled.** `/api/health` reports
 `can_run_pipeline: false` when a checkpoint a stage actually loads is missing.
-Run `scripts/fetch_va_checkpoint.sh`. Only the four checkpoints in
-`STAGE_MODELS` block a run; the rest are listed as unused.
+Only two can be: `va-xlmroberta-large` and `emotion-en-deberta`, the local
+checkpoints stages name in `STAGE_MODELS` (the other two there are Hub models
+that download themselves; local checkpoints no stage loads are listed as
+unused). Fetch them on the host with `scripts/fetch_va_checkpoint.sh` and
+`scripts/fetch_emotion_en_checkpoint.sh`, then copy them into the volume — the
+host's `./models` is not mounted:
+
+```bash
+docker compose --profile full cp models/xlmroberta-base-va app:/data/models/
+docker compose --profile full cp models/emotion-en-deberta app:/data/models/
+docker compose --profile full exec -u 0 app chown -R 10001:10001 /data/models/xlmroberta-base-va /data/models/emotion-en-deberta
+```
 
 **The frontend loads but every panel says the API is unreachable.** The browser
-is using `NEXT_PUBLIC_API_URL`, which is baked in at container start. Check the
-value in `compose.yaml` matches the port you published.
+is using `NEXT_PUBLIC_API_URL`, which is baked in at build time. Check the
+value in `compose.yaml`'s `build.args` matches the port you published, and
+`docker compose build frontend` after changing it.
 
 **A run shows as failed straight after a restart.** That is the orphan sweep:
 the process died with the container, and the job record is corrected rather

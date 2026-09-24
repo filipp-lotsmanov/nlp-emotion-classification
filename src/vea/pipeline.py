@@ -18,18 +18,19 @@ This script orchestrates all 9 stages of the video emotion analysis pipeline:
 Design principles:
 - Sequential processing: Each stage validates previous stage output
 - Skip logic: Reuses existing processed data (unless force flags set)
-- Error isolation: One stage failure doesn't crash entire pipeline
+- Fail fast: a failure in stages 1-7 stops the run; stages 8 and 9 only log
 - Progress visibility: Clear logging of what's happening
 - Configuration transparency: Shows what settings are being used
-- Resource management: Models loaded once and reused across all videos
+- Resource management: the sentence embedder and NLLB are loaded once per run
 
 Usage:
-    python main.py <youtube_url>
+    uv run vea run <youtube_url>
 
 Example:
-    python main.py "https://www.youtube.com/watch?v=mqGSkDFeLEo"
+    uv run vea run "https://www.youtube.com/watch?v=mqGSkDFeLEo"
 """
 
+import copy
 import logging
 import sys
 from pathlib import Path
@@ -43,7 +44,12 @@ from typing import Dict, Optional
 # directory, and made the module impossible to import from a test. They are now
 # package-relative and allowed to raise: an ImportError here is a broken
 # install, and the traceback is more useful than a printed checklist.
-from vea.config import MODEL_REGISTRY, resolve_model, translation_model_ref
+from vea.config import (
+    MODEL_REGISTRY,
+    apply_device_setting,
+    resolve_model,
+    translation_model_ref,
+)
 
 # Stages 6A/6B and 7A/7B are imported as modules rather than as symbols, because
 # the Russian and English variants define same-named functions.
@@ -166,7 +172,7 @@ DEFAULT_CONFIGS = {
         "description": "Multilingual XLM-RoBERTa for Russian VA prediction",
         "config": {
             "batch_size": 32,
-            "device": None,  # None -> vea.config.resolve_device()
+            "device": None,  # None -> VEA_DEVICE if set, else the stage decides
             "skip_advertisements": True,
             "threshold_method": "median",  # Video-adaptive threshold
         },
@@ -987,9 +993,10 @@ def main(youtube_url: str, configs: Optional[Dict] = None):
         youtube_url: YouTube video URL to process
         configs: Optional custom configurations (uses defaults if not provided)
     """
-    # Use default configs if not provided
-    if configs is None:
-        configs = DEFAULT_CONFIGS.copy()
+    # A deep copy: filling in devices below must not leak into DEFAULT_CONFIGS
+    # or into a dict the caller still holds.
+    configs = copy.deepcopy(DEFAULT_CONFIGS if configs is None else configs)
+    device = apply_device_setting(configs)
 
     # Extract video ID for display
     video_id = extract_video_id_from_url(youtube_url)
@@ -1012,7 +1019,7 @@ def main(youtube_url: str, configs: Optional[Dict] = None):
     # Stage 5A: Load semantic model for scene alignment
     # Note: Uses multilingual embeddings for Russian text understanding
     try:
-        semantic_model = load_semantic_model("paraphrase-multilingual-MiniLM-L12-v2")
+        semantic_model = load_semantic_model("paraphrase-multilingual-MiniLM-L12-v2", device=device)
         if semantic_model:
             logger.info("Semantic model loaded (Stage 5A)")
         else:
@@ -1029,6 +1036,7 @@ def main(youtube_url: str, configs: Optional[Dict] = None):
         translator = NLLBTranslator(
             model_name=configs["stage_5b_translation"]["model_name"],
             preferred_gpu=configs["stage_5b_translation"].get("preferred_gpu"),
+            device=configs["stage_5b_translation"].get("device") or device,
         )
         logger.info("Translator initialized")
     except Exception as e:
@@ -1166,9 +1174,9 @@ def main(youtube_url: str, configs: Optional[Dict] = None):
 if __name__ == "__main__":
     # Parse command line arguments
     if len(sys.argv) < 2:
-        print("Usage: python main.py <youtube_url>")
+        print("Usage: python -m vea.pipeline <youtube_url>  (prefer `uv run vea run`)")
         print("\nExample:")
-        print('  python main.py "https://www.youtube.com/watch?v=mqGSkDFeLEo"')
+        print('  python -m vea.pipeline "https://www.youtube.com/watch?v=mqGSkDFeLEo"')
         sys.exit(1)
 
     youtube_url = sys.argv[1]

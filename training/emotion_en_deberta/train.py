@@ -66,8 +66,9 @@ v3-base's numbers, and v3 checkpoints load through the `DebertaV2` classes in
 transformers, which is where the "V2" comes from. DeBERTa-v1-base has a 50,265
 BPE vocabulary and ~140M parameters, so it is not the model described.
 
-Card-derived defaults where the card is specific (3 epochs, batch 16, max length
-512, 15% validation), conventional where it is not (lr 2e-5, 6% warmup).
+Card-derived defaults where the card is specific (3 epochs, max length 512, 15%
+validation), conventional where it is not (batch 16 for its "small batch size",
+lr 2e-5, 6% warmup).
 Everything that defines a run lands in `train_config.json` beside the weights.
 """
 

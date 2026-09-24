@@ -17,20 +17,25 @@ uv sync --extra train
 
 | Target | Blocks | Training code | Corpus | Status |
 | --- | --- | --- | --- | --- |
-| `va-xlmroberta-large` | Stages 6A, 6B, and therefore 7-9 | **written** (`va_regressor/train.py`) | **missing** | Needs a corpus |
-| `emotion-en-deberta` | Stage 7B ensemble member 2 | **written** (`emotion_en_deberta/train.py`) | `corpora/super_emotion_clean.csv.gz`, verified | **Ready to run** |
+| `va-xlmroberta-large` | Stages 6A, 6B, and therefore 7-9 | **written** (`va_regressor/train.py`) | **missing** | Released (`weights-va-v1`), fetched by `scripts/fetch_va_checkpoint.sh`; a rebuild needs a corpus |
+| `emotion-en-deberta` | Stage 7B ensemble member 2 | **written** (`emotion_en_deberta/train.py`) | `corpora/super_emotion_clean.csv.gz`, verified | **Retrained** 2026-09-16, reproducible |
 | `emotion-ru-finetuned` | Nothing (unused by pipeline) | Complete (`emotion_ru/`) | `corpora/ru_izard_emotions.csv.gz`, not the notebook's set | Optional |
 
-**The VA regressor is the only hard blocker left, and it is blocked on data, not
-on code.** Stages 7A and 7B consume the `is_emotionally_significant` flag that
-stage 6A produces, and stages 8 and 9 consume stage 7, so nothing downstream
-runs without it. `va_regressor/train.py` is written, unit-tested and proven end
-to end on synthetic data; it needs a valence-arousal corpus and nothing else.
-EmoBank is the recommended choice (1–5 scale, so `--va-min 1 --va-max 5`).
-Neither delivered corpus carries valence or arousal annotations.
+**The VA regressor no longer blocks anything, but it is mirrored, not rebuilt.**
+Stages 7A and 7B consume the `is_emotionally_significant` flag that stage 6A
+produces, and stages 8 and 9 consume stage 7, so nothing downstream runs without
+it. The checkpoint is the published one (`gmendes9/multilingual_va_prediction`),
+released on this repository as `weights-va-v1` and fetched into
+`models/xlmroberta-base-va/` by `scripts/fetch_va_checkpoint.sh`.
+`va_regressor/train.py` is written, unit-tested and proven end to end on
+synthetic data; rebuilding the checkpoint here needs a valence-arousal corpus and
+nothing else. EmoBank is the recommended choice (1–5 scale, so
+`--va-min 1 --va-max 5`). Neither delivered corpus carries valence or arousal
+annotations.
 
-**The DeBERTa classifier can be trained today**, and should be: it is
-independent of the VA blocker and costs a few hours of GPU time.
+**The DeBERTa classifier is reproducible here**, and has been reproduced: the
+checkpoint the pipeline loads was retrained with this code on 2026-09-16 (see
+the model card), and a rerun costs a few hours of GPU time.
 
 ```bash
 ./scripts/train_emotion_en.sh --smoke    # ~2 min: proves the loop and the contract
@@ -38,6 +43,9 @@ independent of the VA blocker and costs a few hours of GPU time.
 ```
 
 ## Order of work
+
+This was the order while both checkpoints were missing. Steps 3 and 4 are done,
+and step 1 is covered by the mirrored checkpoint rather than a rebuild.
 
 1. `va_regressor/` — unblocks stages 6-9. Verify end to end on one short video.
 2. Re-run one video and confirm stage 9 writes a CSV with plausible values.
@@ -82,6 +90,9 @@ Therefore the checkpoint must satisfy:
   inference uses.
 - Base model: XLM-RoBERTa-large, because stage 6B feeds the *same* checkpoint
   English text. A Russian-only encoder would break cross-language comparison.
+  (`train.py` defaults to large; the released `weights-va-v1` checkpoint is the
+  base size, saved as `xlmroberta-base-va/` — see `docs/PROVENANCE.md` §11.
+  Either size loads, because the pipeline reads whatever is in that directory.)
 
 ### English emotion classifier — `src/vea/stages/emotion_en.py`
 
@@ -197,8 +208,10 @@ What the run is configured to do, and why:
   `src/vea/stages/emotion_en.py` applies softmax and argmax. The label is the
   same either way, the confidence is not, and stage 8 thresholds on confidence.
   The code is the contract.
-- **3 epochs, batch 16, max length 512, 15% validation** — all from the card.
-  lr 2e-5 and 6% warmup are conventional; the card does not record them.
+- **3 epochs, max length 512, 15% validation** — from the card; the 15% is
+  inferred from its per-class validation supports. **Batch 16** is a choice: the
+  card says only "small batch size (to limit compute)". lr 2e-5 and 6% warmup
+  are conventional; the card does not record them.
 - **Model selection on macro F1.** Accuracy is 64% decided by Joy and Sadness
   alone, so a model answering only those two scores 0.64.
 - **Split stratified by class and grouped by text.** 444 texts appear twice and
@@ -235,7 +248,8 @@ This one is complete, and is the model to imitate for documentation quality.
 
 ```
 01_build_dataset.ipynb   Loads Djacon/ru-izard-emotions, drops shame and guilt,
-                         downsamples to 1,996 samples per label, writes a pickle
+                         downsamples to 1,996 samples per label (7,006 rows),
+                         writes a pickle
 train_single.py          DeepPavlov/rubert-base-cased, lr 2e-5, bs 16, 10 epochs
 grid_search.py           3 models x 3 learning rates x 3 batch sizes = 27 runs
 grid_search_results.json Per-config macro/micro F1, AUC, per-label F1
@@ -244,7 +258,7 @@ grid_search_results.json Per-config macro/micro F1, AUC, per-label F1
 A third corpus arrived with the English one:
 `corpora/ru_izard_emotions.csv.gz`, 24,766 single-label rows from the same
 upstream source. It is **not** the set this notebook builds — the notebook works
-multi-label and downsamples to 1,996 rows per label, about 14,000 rows balanced —
+multi-label and downsamples to 1,996 rows per label, 7,006 rows balanced —
 so `grid_search_results.csv` describes a different dataset and its numbers do not
 transfer to anything trained on the new file. Its text is also raw rather than
 cleaned, which is why `MODEL_REGISTRY["emotion-ru-finetuned"].preprocess` stays
@@ -254,10 +268,13 @@ Note two things when you write this up:
 
 1. The pipeline does **not** use this model. Stage 7A loads the third-party
    `Djacon/rubert-tiny2-russian-emotion-detection` instead. The best grid-search
-   macro F1 was around 0.53, which is a reasonable justification, but it is
-   currently undocumented — state it explicitly.
-2. The notebook drops `shame` and `guilt` to reach seven labels, but the
-   remaining Izard labels are not the same seven as the English side. Before
+   macro F1 was 0.5825 (`ai-forever/ruBert-base`, lr 2e-5, batch 16; the best
+   `cointegrated/rubert-tiny2` run reached 0.5368), measured on the notebook's
+   balanced set rather than on anything the pipeline sees. Why the group's own
+   model was not used is currently undocumented — state it explicitly.
+2. The notebook drops `shame` and `guilt`, which leaves eight labels, not
+   seven: `enthusiasm` stays, and the remaining Izard labels are not the same
+   set as the English side. Before
    you compare Russian and English emotions per segment, verify the two label
    sets actually align:
 
@@ -273,8 +290,8 @@ Note two things when you write this up:
 
    Any Russian label that is not in `EMOTION_CONFIG` in
    `src/vea/stages/visualize.py` (`neutral, joy, fear, anger, surprise,
-   sadness, disgust`, plus aliases `happiness/happy -> joy` and `sad ->
-   sadness`) is silently rewritten to `neutral` in the timeline, while the CSV
+   sadness, disgust`, plus the aliases in `vea.config.EMOTION_ALIASES`:
+   `happiness/happy/enthusiasm -> joy` and `sad -> sadness`) is silently rewritten to `neutral` in the timeline, while the CSV
    exporter keeps the raw label. That is how the plot and the CSV can disagree.
 
 ## `baselines/` and `translation/`
@@ -282,9 +299,8 @@ Note two things when you write this up:
 Coursework from earlier tasks, kept because they are the iteration evidence, not
 because the pipeline uses them. `baselines/` trains classical and transformer
 models on MELD; `translation/` is the from-scratch transformer translation
-experiment superseded by NLLB in stage 5B. Both carry hardcoded Windows paths in
-their `__main__` blocks (`A:\git\...`), which is why they are not wired into
-anything. See `docs/PROVENANCE.md`.
+experiment superseded by NLLB in stage 5B. Neither is wired into anything. See
+`docs/PROVENANCE.md`.
 
 ## Where checkpoints go
 
@@ -293,7 +309,7 @@ Save into `VEA_MODELS_DIR` (default `./models/`) under the `ref` declared in
 
 ```
 models/
-├── xlmroberta-large-va/     # va-xlmroberta-large
+├── xlmroberta-base-va/      # va-xlmroberta-large
 ├── emotion-en-deberta/      # emotion-en-deberta
 └── emotion-ru-rubert/       # emotion-ru-finetuned
 ```

@@ -32,10 +32,10 @@ Usage:
     python training/va_regressor/train.py \
         --dataset data/emobank.csv --text-col text \
         --valence-col V --arousal-col A --va-min 1 --va-max 5 \
-        --output models/xlmroberta-large-va
+        --output models/xlmroberta-base-va
 
     # 3. Confirm the checkpoint satisfies the pipeline contract:
-    python training/verify_checkpoint.py va models/xlmroberta-large-va
+    python training/verify_checkpoint.py va models/xlmroberta-base-va
 
 Corpus choice is yours and is the biggest reproducibility gap in the project:
 the archive recorded only a citation (Mendes & Martins, multilingual VA

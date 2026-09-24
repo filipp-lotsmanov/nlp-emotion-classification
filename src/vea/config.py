@@ -82,9 +82,11 @@ class ModelSpec:
 # Every model the pipeline touches is declared here exactly once. Stage modules
 # must look models up by logical name instead of embedding paths.
 #
-# The two "local" entries are the checkpoints that are NOT in the archive. Until
-# they are retrained (see training/README.md) stages 6A, 6B and the DeBERTa half
-# of 7B cannot run, and resolve_model() will say so explicitly.
+# The "local" entries are checkpoints that must exist on disk. The two stages
+# need (va-xlmroberta-large for 6A/6B, emotion-en-deberta for the second half of
+# 7B) are fetched by scripts/fetch_va_checkpoint.sh and
+# scripts/fetch_emotion_en_checkpoint.sh; until they are, resolve_model() says
+# so explicitly.
 MODEL_REGISTRY: dict[str, ModelSpec] = {
     # --- Stage 4: transcription -------------------------------------------
     "whisper-large-v3": ModelSpec(
@@ -192,7 +194,7 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     "emotion-en-emoberta": ModelSpec(
         kind="hub",
         ref="tae898/emoberta-large",
-        purpose="stage_7b_english_emotion, stand-in used by the shipped pipeline",
+        purpose="none - registered but loaded by no stage (was stage 7B's stand-in)",
         provenance=(
             "Third-party RoBERTa-large trained on MELD. The original orchestrator "
             "loaded this under the label 'deberta-finetuned', so published outputs "
@@ -523,7 +525,7 @@ def resolve_device(preferred: str | None = None) -> str:
         if requested.startswith("cuda"):
             raise RuntimeError(
                 f"Device {requested!r} requested but torch is not installed. "
-                "Install the training/inference extras: `uv sync --extra gpu`."
+                "It is a core dependency: run `uv sync` in the repository."
             ) from None
         return "cpu"
 
@@ -536,6 +538,40 @@ def resolve_device(preferred: str | None = None) -> str:
             "Use VEA_DEVICE=cpu to run on CPU, or check CUDA_VISIBLE_DEVICES."
         )
     return requested
+
+
+def apply_device_setting(configs: dict, requested: str | None = None) -> str | None:
+    """Fill every unset ``device`` in a pipeline config from ``VEA_DEVICE``.
+
+    Only an explicit setting overrides. Under ``auto`` each stage keeps its own
+    choice, which for stage 5B is the visible GPU with the most free memory
+    rather than the first one, so resolving ``auto`` here would make it worse.
+    A ``device`` a caller already set is left alone.
+
+    Args:
+        configs: the pipeline's stage configs, modified in place.
+        requested: overrides ``VEA_DEVICE``; for tests.
+
+    Returns:
+        The device written, or None when nothing was overridden.
+    """
+    requested = (requested or get_settings().device or "auto").lower()
+    if requested == "auto":
+        return None
+    device = resolve_device(requested)
+
+    def fill(node: object) -> None:
+        if isinstance(node, dict):
+            if "device" in node and node["device"] is None:
+                node["device"] = device
+            for value in node.values():
+                fill(value)
+        elif isinstance(node, list):
+            for item in node:
+                fill(item)
+
+    fill(configs)
+    return device
 
 
 def configure_logging(level: str | None = None) -> None:

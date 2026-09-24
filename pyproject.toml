@@ -66,10 +66,10 @@ baselines = [
 xai = [
     "captum>=0.7,<1",
 ]
-# training/baselines/models/{lstm,gru,rnn}.py import tensorflow.keras only for
-# Tokenizer and pad_sequences - roughly 600 MB of TensorFlow for two utility
-# functions, inside otherwise pure PyTorch models. Kept as an opt-in extra
-# rather than a dependency; see docs/PROVENANCE.md for the replacement note.
+# Nothing committed here imports tensorflow or keras; the
+# training/baselines/models/ this extra was declared for does not exist in this
+# repository. Kept as an opt-in extra rather than a dependency; see
+# docs/PROVENANCE.md section 5.
 tensorflow = [
     "tensorflow>=2.16,<3",
 ]

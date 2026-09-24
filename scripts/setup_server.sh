@@ -140,7 +140,7 @@ say "Node.js (frontend only)"
 # frontend/ needs it. A box that cannot reach nodejs.org should still finish
 # this script with a working pipeline.
 #
-# Next 15 wants Node 20 or newer, which is why the version is checked rather
+# Next 16 wants Node 20.9 or newer, which is why the version is checked rather
 # than just the binary's presence: the distro package on this image is older
 # than that and would fail at `next dev` with a message about the engine.
 NODE_MIN_MAJOR=20

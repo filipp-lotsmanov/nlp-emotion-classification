@@ -43,8 +43,16 @@ mismatched download is deleted rather than left to be picked up as a cache hit
 on the next run. The VA script additionally patches the missing `id2label` into
 `config.json`. On Windows, run both from **Git Bash**, not PowerShell.
 
-About 1.7 GB between them. Neither overwrites a checkpoint you already have —
-pass `--force` if replacing one is what you meant.
+About 1.7 GB between them. Re-running either is safe, but they treat an
+existing checkpoint differently. `fetch_emotion_en_checkpoint.sh` refuses
+(exit 3) if the directory already exists — pass `--force` if replacing it is
+what you meant. `fetch_va_checkpoint.sh` has no `--force`: it keeps any file
+already present and non-empty, downloads only the missing ones, then checks the
+weights' SHA-256 and deletes `model.safetensors` on a mismatch, so a second run
+fetches it fresh.
+
+On the Docker route these land in `./models` on the host, which the containers
+do not see — see [Getting the checkpoints into the container](#getting-the-checkpoints-into-the-container).
 
 `./scripts/fetch_emotion_en_checkpoint.sh --balanced` fetches a second,
 class-weighted run of the same model. No stage loads it; it is published so
@@ -66,10 +74,13 @@ a run. Only the two above do.
 
 ### Disk
 
-Roughly 20 GB free for the full setup: the `app` image is several GB, and the
-first run pulls about 4 GB of Hub models (Whisper large-v3, NLLB, two
-classifiers, a sentence embedder). They are cached in a Docker volume or under
-`~/.cache/huggingface`, so it is a one-time cost.
+Roughly 30 GB free for the full setup: the `app` image is several GB, and the
+first run pulls Hub models (Whisper large-v3, NLLB, two classifiers, a sentence
+embedder) — over 20 GB with the default NLLB-3.3B, which is ~17 GB on its own,
+or about 6 GB with `nllb-600m` (see
+[If your machine is short of memory](#if-your-machine-is-short-of-memory)).
+They are cached in a Docker volume or under `~/.cache/huggingface`, so it is a
+one-time cost.
 
 ---
 
@@ -81,7 +92,7 @@ classifiers, a sentence embedder). They are cached in a Docker volume or under
 it and wait for the whale icon to settle before running anything.
 
 ```powershell
-cd C:\path\to\emotion-pipeline
+cd C:\path\to\nlp-emotion-classification
 docker compose up -d
 ```
 
@@ -104,7 +115,7 @@ Only use the overlay if `docker run --rm --gpus all ubuntu:22.04 nvidia-smi -L`
 works. Without a visible adapter the daemon **refuses to create the
 container** rather than falling back to the CPU.
 
-No NVIDIA card? Build smaller and skip 1.4 GB of CUDA libraries nothing will
+No NVIDIA card? Build smaller and skip ~600 MB of CUDA 12 cuBLAS nothing will
 load:
 
 ```powershell
@@ -128,7 +139,7 @@ Windows notes:
 **Install Docker Desktop for Mac**, then:
 
 ```bash
-cd ~/path/to/emotion-pipeline
+cd ~/path/to/nlp-emotion-classification
 docker compose up -d                              # viewer + frontend
 docker compose --profile full up -d app frontend  # the whole pipeline
 ```
@@ -154,7 +165,7 @@ the old `docker-compose` script is not enough, because the Dockerfile uses
 BuildKit bind mounts and the compose file uses profiles.
 
 ```bash
-cd ~/path/to/emotion-pipeline
+cd ~/path/to/nlp-emotion-classification
 ./scripts/setup_docker.sh            # viewer + frontend, checks the host first
 ./scripts/setup_docker.sh --full     # the whole pipeline
 ./scripts/setup_docker.sh --down     # stop, keep the data
@@ -178,6 +189,25 @@ Without the script:
 docker compose --profile full up -d app frontend                                   # CPU
 docker compose -f compose.yaml -f compose.gpu.yaml --profile full up -d app frontend  # GPU
 ```
+
+### Getting the checkpoints into the container
+
+The fetch scripts write to `./models` on the host. The `app` container reads
+checkpoints from `/data/models` inside the `vea_vea-data` volume, and `models/`
+is excluded from the image build, so a host fetch alone leaves
+`can_run_pipeline: false`. Copy both directories in once `app` is running, then
+hand them to the container's user (uid 10001), as `setup_docker.sh --seed` does
+for runs:
+
+```bash
+docker compose --profile full cp models/xlmroberta-base-va app:/data/models/
+docker compose --profile full cp models/emotion-en-deberta app:/data/models/
+docker compose --profile full exec -u 0 app chown -R 10001:10001 /data/models/xlmroberta-base-va /data/models/emotion-en-deberta
+docker compose --profile full exec app vea models
+```
+
+They live in the volume from then on, so this survives rebuilds. `/api/health`
+re-checks on every request; no restart is needed.
 
 ### Putting a finished run in front of the viewer
 
@@ -205,8 +235,8 @@ when present.
    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
    ```
 3. **ffmpeg** — `winget install Gyan.FFmpeg`, then reopen the terminal so it is
-   on `PATH`. Stage 3 fails without it.
-4. **Node 20+** from nodejs.org, for the frontend.
+   on `PATH`. Stage 1 fails without it (yt-dlp uses it to extract the audio).
+4. **Node 20.9 or newer** from nodejs.org, for the frontend.
 
 ```powershell
 uv sync --extra api --extra train
@@ -222,19 +252,22 @@ wired up here.
 
 ```bash
 brew install uv ffmpeg node
-cd ~/path/to/emotion-pipeline
+cd ~/path/to/nlp-emotion-classification
 uv sync --extra api --extra train
 uv run vea config
 ```
 
-torch installs the CPU/MPS build. Apple Silicon works; expect CPU-class speed.
+torch installs the CPU/MPS build. **Apple Silicon only**: the torch version in
+`uv.lock` publishes no Intel (`x86_64`) macOS wheel, and its arm64 wheel wants
+macOS 14 or later. On an Intel Mac, use the Docker route. Expect CPU-class
+speed.
 
 ### Linux
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 sudo apt install ffmpeg          # Debian/Ubuntu
-cd ~/path/to/emotion-pipeline
+cd ~/path/to/nlp-emotion-classification
 uv sync --extra api --extra train
 uv run vea config
 ```
@@ -296,8 +329,8 @@ something was wrong.
 
 What to expect:
 
-- A long quiet period before stage 1 shows progress on the very first run —
-  that is ~4 GB of models downloading into the cache.
+- Long quiet periods on the very first run while models download into the
+  cache — over 20 GB with the default NLLB-3.3B, about 6 GB with `nllb-600m`.
 - `Using int8 compute_type for CPU` in the log at stage 4 on a machine with no
   GPU. Expected: the transcriber adapting, not an error.
 - On CPU, transcription and translation dominate the wall clock. The progress

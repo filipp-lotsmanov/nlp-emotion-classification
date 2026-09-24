@@ -5,12 +5,14 @@ the register this project needs rather than product reviews. This is how one was
 assembled, what assembling it threw away, and which parts of it a reader can
 rebuild.
 
-```bash
-uv run emotion-timeline dataset                    # the recorded build
-uv sync --extra data && uv run emotion-timeline build-dataset   # rerun it
-```
+The build pipeline and its build record live outside this repository. What is
+here is the build's output, `corpora/super_emotion_clean.csv.gz` (described in
+[`corpora/README.md`](../corpora/README.md)), and a check that the committed file
+still matches the figures on this page:
 
-![One in four source rows never reaches the training set](../assets/dataset-funnel.png)
+```bash
+uv run python training/emotion_en_deberta/data_prep.py
+```
 
 ## Where it comes from
 
@@ -36,9 +38,8 @@ five corpora barely have.
 
 ## What building it discards
 
-Roughly a quarter of the source corpus. Every drop is accounted for in
-`benchmarks/dataset/build-record.json`, and each step's row count chains into the
-next, which `check_consistency` asserts.
+Roughly a quarter of the source corpus. Every drop is accounted for in the build
+record (not in this repository), and each step's row count chains into the next.
 
 | Step | Rows out | Removed |
 | --- | ---: | ---: |
@@ -63,14 +64,16 @@ was that a fourteenth of the data got dropped.
 
 ## The text pipeline
 
-Twelve normalisation steps, in a fixed order, in
-[`data/clean.py`](../src/emotion_timeline/data/clean.py). The order is pinned by
-a test because changing it changes the dataset.
+Twelve normalisation steps, in a fixed order, vendored verbatim from the build
+as [`src/vea/text_clean.py`](../src/vea/text_clean.py), which the pipeline applies
+at inference. The order is pinned by a test (`tests/test_text_transforms.py`)
+because changing it changes the dataset.
 
 The step that matters most is `mark_shouting`. It lowercases everything and
 inserts a literal `[CAPS]` token before each all-caps word, so `ANGRY` and
 `angry` share a token while the shouting survives as a feature of its own. That
-choice is why the error analysis could later measure shouting at all, and what
+choice is why the original project's error analysis (not in this repository)
+could later measure shouting at all, and what
 it measured was the strongest single predictor of a wrong answer in the whole
 study: **56.8% error rate on texts with an ALL-CAPS word against 6.9% without**.
 Erasing case would have deleted that finding along with the signal.
@@ -81,7 +84,8 @@ The pipeline is split in two around it, and that is not cosmetic. Before case is
 folded, `Yes indeed` and `yes indeed` are different rows; afterwards they are
 the same one. Deduplicating late removes 671 rows that the published build keeps,
 and a build that does that no longer reproduces the published class counts.
-`test_deduplicating_late_would_lose_rows` pins the difference.
+`src/vea/text_clean.py` keeps the same split, as `BEFORE_DEDUPE` and
+`AFTER_DEDUPE`.
 
 ### A bug this build reproduces on purpose
 
@@ -117,8 +121,6 @@ there from 35 source emotion names is three rules.
 
 ## What the result looks like
 
-![Joy outnumbers Neutral eleven to one](../assets/dataset-classes.png)
-
 | Class | Rows | Share |
 | --- | ---: | ---: |
 | Joy | 147,869 | 34.52% |
@@ -137,7 +139,9 @@ which is the third-largest class and still fails a quarter of the time. So rarit
 explains most of the difficulty here, and where it does not, something else is
 going on.
 
-See [`error-analysis.md`](error-analysis.md).
+These error rates come from the original project's error analysis, which is not
+in this repository. The analysis regenerated against the retrained checkpoint is
+[`evaluation/error_analysis.md`](evaluation/error_analysis.md).
 
 ## Provenance: the 9,151 rows that cannot be rebuilt
 
@@ -148,21 +152,22 @@ project, because even after keeping GoEmotions for disgust the class had only
 
 That file did not survive, and no copy is committed anywhere. So:
 
-- `emotion-timeline build-dataset` reaches 419,180 and stops.
-- The record stores both numbers, separately labelled, and `check_consistency`
-  asserts that 419,180 + 9,151 = 428,331 and that adding the synthetic rows to
-  the reproducible Disgust count gives the published one.
-- The figures mark the synthetic portion of the Disgust bar in grey.
+- The build reaches 419,180 and stops.
+- The record stores both numbers, separately labelled. Here,
+  `tests/test_emotion_en_training.py` asserts that 419,180 + 9,151 = 428,331 and
+  that adding the synthetic rows to the reproducible Disgust count gives the
+  published one.
 
-Everything else reproduces to the row. Running the build on this machine gave
+Everything else reproduces to the row. Running the build gave
 all seven published class counts exactly, and the whole funnel except for a
 single text that the deduplication step removed here and the length filter
 removed there. Both discard it, so nothing downstream differs.
 
 ## The cross-check
 
-The error analysis in `benchmarks/error-analysis/` records an evaluation over
-64,250 samples and says nothing about where they came from. This record says the
+The original error analysis records an evaluation over 64,250 samples (its
+per-class supports are the ones in the model card's held-out table) and says
+nothing about where they came from. This record says the
 training set holds 428,331 rows and says nothing about any evaluation. Those two
 documents were written months apart, and:
 
@@ -174,7 +179,8 @@ documents were written months apart, and:
 Neither number is derivable from the other, so their agreeing is real evidence
 that the error analysis describes a model trained on this data. It is also the
 only such evidence available, because the raw predictions are gone.
-`test_the_evaluation_set_is_15_percent_of_this_dataset` asserts it.
+`test_the_card_supports_are_fifteen_percent_of_these_counts` in
+`tests/test_emotion_en_training.py` asserts it.
 
 ## What this does not establish
 

@@ -17,6 +17,7 @@ from vea.config import (
     MissingCheckpointError,
     ModelSpec,
     Settings,
+    apply_device_setting,
     missing_checkpoints,
     resolve_model,
     translation_model_ref,
@@ -52,6 +53,44 @@ class TestSettings:
         # this naming is load-bearing, not cosmetic.
         settings = Settings.from_env(env={"VEA_DATA_DIR": "/tmp/d"})
         assert settings.video_dir("mqGSkDFeLEo").name == "video-mqGSkDFeLEo"
+
+
+class TestDeviceSetting:
+    """`VEA_DEVICE` used to be read, printed by `vea config`, and then ignored:
+    every stage defaulted to cuda-if-available whatever it said."""
+
+    @staticmethod
+    def _configs() -> dict:
+        # The shapes DEFAULT_CONFIGS uses: a flat stage, and 7B's list of models.
+        return {
+            "stage_4": {"device": None, "model_size": "large-v3"},
+            "stage_7b": {"models": [{"config": {"device": None}}, {"config": {"device": None}}]},
+            "stage_1": {"base_output": "downloads"},
+        }
+
+    def test_an_explicit_setting_reaches_every_stage(self):
+        configs = self._configs()
+        assert apply_device_setting(configs, "cpu") == "cpu"
+        assert configs["stage_4"]["device"] == "cpu"
+        assert [m["config"]["device"] for m in configs["stage_7b"]["models"]] == ["cpu", "cpu"]
+
+    def test_stages_without_a_device_are_not_given_one(self):
+        configs = self._configs()
+        apply_device_setting(configs, "cpu")
+        assert "device" not in configs["stage_1"]
+
+    def test_a_device_the_caller_set_is_kept(self):
+        configs = self._configs()
+        configs["stage_4"]["device"] = "cuda:1"
+        apply_device_setting(configs, "cpu")
+        assert configs["stage_4"]["device"] == "cuda:1"
+
+    def test_auto_leaves_each_stage_to_choose(self):
+        # Resolving "auto" here would pin stage 5B to the first GPU instead of
+        # the one with the most free memory.
+        configs = self._configs()
+        assert apply_device_setting(configs, "auto") is None
+        assert configs == self._configs()
 
 
 class TestRegistry:

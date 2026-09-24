@@ -1,14 +1,11 @@
+import argparse
+from pathlib import Path
+
 import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-
-model_path = r"C:\Users\Filip Letmanov\Block A\personal_repository\Task10"
-
-model = AutoModelForSequenceClassification.from_pretrained(model_path, local_files_only=True)
-tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
-model.eval()
 
 
 def gradient_x_input_correct(sentence, model, tokenizer, target_emotion_idx=None):
@@ -80,6 +77,18 @@ def visualize_attribution(attribution, tokens, sentence, emotion_idx, method_nam
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Gradient x Input attributions for the English emotion classifier."
+    )
+    parser.add_argument("checkpoint", type=Path, help="directory holding the model and tokenizer")
+    args = parser.parse_args()
+
+    model = AutoModelForSequenceClassification.from_pretrained(
+        args.checkpoint, local_files_only=True
+    )
+    tokenizer = AutoTokenizer.from_pretrained(args.checkpoint, local_files_only=True)
+    model.eval()
+
     test_sentences = {
         "joy": [
             "Everything worked out perfectly — we did it!",

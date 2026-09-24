@@ -1,21 +1,33 @@
-# **Model Card: DeBERTa-V2 Emotion Classification Model**
+# **Model Card: DeBERTa-v3-base Emotion Classification Model**
 
 ---
 
 ## **Model Overview**
 
-The **DeBERTa-V2 Emotion Classifier** is a fine-tuned multilingual Transformer model designed for **single-label emotion classification** in media text.  
+The **DeBERTa Emotion Classifier** is a fine-tuned English Transformer model (`microsoft/deberta-v3-base`) designed for **single-label emotion classification** in media text.  
 It recognizes **seven emotion categories**: *joy, sadness, anger, fear, disgust, surprise,* and *neutral*. 
+
+> **What ships, and what this card originally described.** The checkpoint this
+> card was first written for is not in the project archive (see
+> `docs/PROVENANCE.md` section 2). The pipeline loads a retrained one, built
+> by `training/emotion_en_deberta/train.py` (see *Reproduction, 2026-09-16*
+> below): `microsoft/deberta-v3-base`, trained with cross-entropy as a
+> single-label classifier, read at inference by `src/vea/stages/emotion_en.py`
+> with softmax and argmax. The original card named the base "DeBERTa-V2-Base"
+> (v3 checkpoints load through the `DebertaV2` classes in transformers; its
+> vocabulary, layer and parameter figures are v3-base's) and described a sigmoid
+> head. The published metrics, the development environment and the confidence
+> analysis below are the original model's, and are labelled as such.
 
 | Attribute | Description                                                |
 |------------|------------------------------------------------------------|
-| **Model Type** | Transformer (DeBERTa-V2-Base)                              |
+| **Model Type** | Transformer (`microsoft/deberta-v3-base`, `DebertaV2` classes) |
 | **Task** | Single-label Emotion Classification                        |
 | **Languages** | English                                                    |
 | **Domain** | Media transcripts (film, series, and TV dialogue)          |
-| **Output** | 7-dimensional sigmoid probabilities for emotion categories |
-| **Framework** | PyTorch 2.1 + Transformers 4.57                            |
-| **Precision** | Float32                                                    |
+| **Output** | 7-way softmax probabilities; the predicted label is the argmax (the original card described sigmoid) |
+| **Framework** | PyTorch 2.1 + Transformers 4.57 (as recorded for the original model) |
+| **Precision** | Float32 (as recorded for the original model)               |
 
 ---
 
@@ -23,7 +35,7 @@ It recognizes **seven emotion categories**: *joy, sadness, anger, fear, disgust,
 
 | Component | Specification |
 |------------|---------------|
-| **Base Architecture** | DeBERTa-V2-Base |
+| **Base Architecture** | `microsoft/deberta-v3-base` (loaded through the `DebertaV2` classes) |
 | **Layers** | 12 Transformer encoder layers |
 | **Attention Heads** | 12 |
 | **Hidden Size** | 768 |
@@ -34,11 +46,11 @@ It recognizes **seven emotion categories**: *joy, sadness, anger, fear, disgust,
 | **Max Sequence Length** | 512 tokens |
 | **Vocabulary Size** | 128,100 |
 | **Positional Encoding** | Relative (p2c / c2p) |
-| **Classifier Head** | Linear layer (768 → 7) with sigmoid activation |
+| **Classifier Head** | Linear layer (768 → 7); trained with cross-entropy, softmax at inference (the original card said sigmoid) |
 | **Tokenizer** | SentencePiece (`spm.model`) |
 | **Special Tokens** | `[CLS]`, `[SEP]`, `[PAD]`, `[MASK]`, `[UNK]` |
 | **Case Sensitivity** | Case-preserving (no lower-casing) |
-| **Parameters** | ≈ 183 M parameters (confirmed via `tensor_stats.json`) |
+| **Parameters** | ≈ 183 M parameters (the original card cited `tensor_stats.json` for this; that file is not in this repository) |
 
 ---
 
@@ -56,11 +68,13 @@ It identifies and labels emotions expressed in dialogue or transcripts, enabling
 
 ## **Development Context**
 
+As recorded for the original model.
+
 | Aspect | Details                                                                                                               |
 |--------|-----------------------------------------------------------------------------------------------------------------------|
 | **Client** | Content Intelligence Agency                                                                                           |
 | **Project Goal** | Build the core NLP component of a multimodal pipeline that transcribes, translates, and classifies emotions in videos |
-| **Hardware** | NVIDIA RTX A6000 (52 GB VRAM, CUDA 12.8) on BUAS university server                                                    |
+| **Hardware** | NVIDIA RTX A6000 (48 GB VRAM, CUDA 12.8) on BUAS university server                                                    |
 | **Training Duration** | ~2-3 hours                                                                                                            |
 | **OS / Kernel** | Ubuntu 20.04 LTS                                                                                                      |
 | **CPU / RAM** | Intel Xeon Silver 4310 × 2 (20 cores total), 64 GB ECC RAM                                                            |
@@ -175,6 +189,8 @@ for this class, is not its main source.
 
 ### **Held-Out Validation Set Performance**
 
+The original, published model. The retrained checkpoint's numbers follow in the next section.
+
 | Metric | Overall | Anger | Disgust | Fear | Joy | Neutral | Sadness | Surprise |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **Precision** | 0.8011* | 0.9122 | 0.6064 | 0.9543 | 0.9590 | 0.4438 | 0.9396 | 0.7922 |
@@ -247,7 +263,7 @@ with 0.03% of predictions below stage 8's 0.25 floor. Published: 0.8873 and
 0.4275. So the retrained model is more confident in both directions and its
 *relative* gap is narrower — it is more assertive when wrong, which is the worse
 direction for threshold-based filtering. The two are not measured the same way:
-this card describes a sigmoid head, the retrained model is cross-entropy, and the
+the original card described a sigmoid head, the retrained model is cross-entropy, and the
 pipeline applies softmax to whatever it loads. Treat the confidence comparison as
 indicative only; the F1 comparison is sound.
 
@@ -317,7 +333,7 @@ Evaluation on 2,000 samples from the CARER emotion dataset, containing 5 emotion
 - *Fear ↔ Sadness*: overlap in emotional semantics (uncertainty, vulnerability).  
 - *Neutral misclassifications*: ambiguous or subtle sentences often default to dominant emotions.
 
-**Confidence Analysis**
+**Confidence Analysis (original model)**
 
 | Metric | Test Set | CARER |
 | --- | --- | --- |
@@ -326,7 +342,7 @@ Evaluation on 2,000 samples from the CARER emotion dataset, containing 5 emotion
 
 A large confidence gap shows the model is well-calibrated and suitable for threshold-based decisions.
 
-> **Caveat on these confidences.** This card describes the classifier head as
+> **Caveat on these confidences.** The original card described the classifier head as
 > sigmoid ("7-dimensional sigmoid probabilities"), but
 > `src/vea/stages/emotion_en.py` applies **softmax** and takes argmax. The
 > predicted label is the same either way; the confidence value is not. So the
@@ -448,7 +464,7 @@ To assess robustness, the model was tested on **5,000 synthetically generated sa
 
 | Factor | Details                                                                                                                  |
 |---------|--------------------------------------------------------------------------------------------------------------------------|
-| **Hardware** | NVIDIA RTX A6000 (52 GB VRAM, Ampere)                                                                                    |
+| **Hardware** | NVIDIA RTX A6000 (48 GB VRAM, Ampere)                                                                                    |
 | **Training Duration** | ~2-3 hours (single-GPU fine-tuning)                                                                                      |
 | **Power Draw** | ≈ 270 W · h average                                                                                                      |
 | **Estimated Carbon Footprint** | ≈ 0.26 kg CO₂ eq *(using ML CO₂ Impact Calculator)*                                                       |

@@ -24,6 +24,7 @@ from vea.config import (
     extract_youtube_id,
     get_settings,
     missing_checkpoints,
+    resolve_device,
     translation_model_ref,
 )
 
@@ -135,6 +136,14 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print("  https://www.youtube.com/embed/<11-character id>")
         if "REAL_ID" in args.url or "<" in args.url:
             print("\nThat looks like a placeholder. Substitute a real video URL.")
+        return 2
+
+    # VEA_DEVICE=cuda on a machine torch sees no GPU on would otherwise surface
+    # as a traceback from inside the orchestrator.
+    try:
+        resolve_device()
+    except RuntimeError as exc:
+        print(exc)
         return 2
 
     # Imported here, not at module level: this pulls in torch and transformers.
